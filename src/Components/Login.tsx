@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 import React, {useState} from 'react';
 import {
   View,
@@ -50,7 +51,7 @@ export default function Login() {
       // Sign-in the user with the credential
       return auth().signInWithCredential(googleCredential);
     } catch (error) {
-      console.error('Google Sign-In Error:', error);
+      console.log('Google Sign-In Error:', error);
       if (error.code === 'DEVELOPER_ERROR') {
         ToastAndroid.show('Please check your Google configuration', ToastAndroid.SHORT);
       }
@@ -123,16 +124,15 @@ export default function Login() {
       });
       
       // console.log("data",response.data.data._id);
-      if(rememberMe){
+      // if(rememberMe){
       AsyncStorage.setItem("userName",response.data.data.userName)
-    
-    }
+    // }
     AsyncStorage.setItem("userId",response.data.data._id)
+    console.log(response.data.data.sellerInfo)
     if(response.data.data.sellerInfo){
-    
     AsyncStorage.setItem("sellerId",response.data.data.sellerInfo)}
-      ToastAndroid.show('successfully Logined. ', ToastAndroid.SHORT);
-      Navigation.navigate("bottomtabbar")
+      ToastAndroid.show('successfully Logined ', ToastAndroid.SHORT);
+      Navigation.navigate("bottomtabbar" as never)
     } catch (error) {
       ToastAndroid.show("Invalid password or Email Id ",ToastAndroid.LONG)
       console.log('error while logining', error);
@@ -208,7 +208,7 @@ export default function Login() {
             <Text style={styles.rememberMeText}>Remember me</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={()=>Navigation.navigate("resetpassword" as never)}>
           <Text style={styles.forgotPasswordText}>Forgot password?</Text>
         </TouchableOpacity>
       </View>

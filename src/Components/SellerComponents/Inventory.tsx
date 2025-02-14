@@ -1,21 +1,51 @@
+/* eslint-disable react-native/no-inline-styles */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+} from 'react-native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import api from '../../Utils/Api';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 
-const ProductDetailsScreen = () => {
+const InventoryDetailsScreen = () => {
   const [products, setProducts] = useState([]); // Array to store multiple products
   const [loading, setLoading] = useState(false);
   const Navigation = useNavigation();
+  const [ismodalvisible, setmodalVisible] = useState(false);
+  const [HistoryDetails, sethistorydetails] = useState([]);
 
+  const handleUpdate = productId => {
+    Navigation.navigate('AddInventory', {id: productId});
+  };
+  const getHistoryDetails = async _id => {
+    setmodalVisible(true);
+    try {
+      const response = await api.get(`/history/inventory/${_id}`);
+      sethistorydetails(response.data.data);
+    } catch (error) {
+      console.log('Error getting history', error);
+    } finally {
+      setLoading(false);
+      // setmodalVisible(false)
+    }
+  };
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
         const id = (await AsyncStorage.getItem('sellerId')) || '';
-        const productResponse = await api.get(`/seller/inventory/by-seller/${id}`);
+        // console.log(id)
+        const productResponse = await api.get(
+          `/seller/inventory/by-seller/${id}`,
+        );
         setProducts(productResponse.data.data);
       } catch (err) {
         console.log('Error fetching products:', err);
@@ -26,11 +56,6 @@ const ProductDetailsScreen = () => {
 
     fetchProducts();
   }, []);
-
-  const handleUpdate = (productId) => {
-    // Navigate to update screen for the selected product
-    Navigation.navigate('UpdateProductScreen', { productId });
-  };
 
   return (
     <>
@@ -46,79 +71,323 @@ const ProductDetailsScreen = () => {
       <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => Navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => Navigation.goBack()}>
             <AntDesign name="left" size={25} color="black" />
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          
         </View>
-        <Text style={styles.headerText}>Product Details</Text>
+        <Text style={styles.headerText}>Inventory Details</Text>
+
+        <TouchableOpacity
+          onPress={() => Navigation.navigate('AddInventory' as never)}
+          style={styles.addButton}>
+          <AntDesign name="plus" size={20} />
+          <Text style={{fontWeight: 'bold', fontSize: 16}}>Add Items</Text>
+        </TouchableOpacity>
 
         {/* Products List */}
         {products.length === 0 ? (
-  <View style={styles.noProductsContainer}>
-    <Text>No products available In Inventory</Text>
-  </View>
-) : (
-  products.map((selectedProduct) => (
-    <View key={selectedProduct._id} style={styles.productCard}>
-      <Text style={styles.productTitle}>{selectedProduct?.inventoryName}</Text>
-      <Text style={styles.productDescription}>{selectedProduct?.description}</Text>
-      <Text style={styles.productExpiryDate}>
-        Expiry Date: {new Date(selectedProduct.expiryDate).toLocaleDateString()}
-      </Text>
-      <Text style={styles.productQuantity}>Total Quantity: {selectedProduct.totalQuantity}</Text>
+          <View style={styles.noProductsContainer}>
+            <Text>No products available In Inventory</Text>
+          </View>
+        ) : (
+          products.map(selectedProduct => (
+            <View key={selectedProduct._id} style={styles.productCard}>
+              <Text style={styles.productTitle}>
+                {selectedProduct?.inventoryName}
+              </Text>
+              <Text style={styles.productDescription}>
+                {selectedProduct?.description}
+              </Text>
+              <Text style={styles.productExpiryDate}>
+                Expiry Date: {selectedProduct.expiryDate}
+              </Text>
+              <Text style={styles.productQuantity}>
+                Total Quantity: {selectedProduct.totalQuantity}
+              </Text>
 
-      {/* Inventory Details */}
-      <View style={styles.inventoryItem}>
-        {selectedProduct?.inventory?.map((inventoryItem, index) => (
-          <View key={inventoryItem._id}>
-            <Text style={styles.inventoryItemHeader}>Inventory Item {index + 1}</Text>
+              {/* Inventory Details */}
+              <View style={styles.inventoryItem}>
+                {selectedProduct?.inventory?.map((inventoryItem, index) => (
+                  <View key={inventoryItem._id}>
+                    <Text style={styles.inventoryItemHeader}>
+                      Inventory Item {index + 1}
+                    </Text>
 
-            {/* Color and Quantity */}
-            <View style={[styles.inventoryRow, { backgroundColor: inventoryItem.color }]}>
-              <Text style={styles.inventoryText}>Size: {inventoryItem.size || 'N/A'}</Text>
-              <Text style={styles.inventoryText}>Quantity: {inventoryItem.quantity}</Text>
-            </View>
+                    {/* Color and Quantity */}
+                    {inventoryItem.size && inventoryItem.quantity ? (
+                      <View
+                        style={[
+                          styles.inventoryRow,
+                          {backgroundColor: inventoryItem.color},
+                        ]}>
+                        <Text style={styles.inventoryText}>
+                          Size: {inventoryItem.size || 'N/A'}
+                        </Text>
+                        <Text style={styles.inventoryText}>
+                          Quantity: {inventoryItem.quantity}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {inventoryItem.color ? (
+                      <>
+                        <Text style={[styles.inventoryText, {margin: 10}]}>
+                          Color:
+                        </Text>
+                        <View
+                          style={[
+                            styles.inventoryRow,
+                            {
+                              backgroundColor: inventoryItem.color,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            },
+                          ]}>
+                          <Text style={[styles.inventoryText, {}]}>
+                            {inventoryItem.color || 'N/A'}
+                          </Text>
+                        </View>
+                        <Text style={styles.inventoryText}>
+                          Quantity: {inventoryItem.quantity}
+                        </Text>
+                      </>
+                    ) : null}
 
-            {/* Display Sizes if Available */}
-            {inventoryItem.sizes && inventoryItem.sizes.length > 0 && (
-              <View style={styles.sizeQuantityContainer}>
-                <Text style={styles.inventoryText}>Sizes and Quantities:</Text>
-                {inventoryItem.sizes.map((sizeItem, idx) => (
-                  <View key={idx} style={styles.sizeQuantityRow}>
-                    <Text style={styles.inventoryText}>Size: {sizeItem.size}</Text>
-                    <Text style={styles.inventoryText}>Quantity: {sizeItem.quantity}</Text>
+                    {/* Display Sizes if Available */}
+                    {inventoryItem.sizes && inventoryItem.sizes.length > 0 && (
+                      <View style={styles.sizeQuantityContainer}>
+                        <Text style={styles.inventoryText}>
+                          Sizes and Quantities:
+                        </Text>
+                        {inventoryItem.sizes.map((sizeItem, idx) => (
+                          <View key={idx} style={styles.sizeQuantityRow}>
+                            <Text style={styles.inventoryText}>
+                              Size: {sizeItem.size}
+                            </Text>
+                            <Text style={styles.inventoryText}>
+                              Quantity: {sizeItem.quantity}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 ))}
               </View>
-            )}
-          </View>
-        ))}
-      </View>
 
-      {/* Update Button */}
-      <TouchableOpacity
-        style={styles.updateButton}
-        onPress={() => handleUpdate(selectedProduct._id)}
-      >
-        <Text style={styles.updateButtonText}>Update Product</Text>
-      </TouchableOpacity>
-    </View>
-  ))
-)}
-
+              {/* Update Button */}
+              <View style={styles.navigationButtons}>
+                <TouchableOpacity
+                  style={styles.updateButton}
+                  onPress={() => handleUpdate(selectedProduct._id)}>
+                  <Text style={styles.updateButtonText}>Update </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.updateButton, {backgroundColor: '#fbdd74'}]}
+                  onPress={() => getHistoryDetails(selectedProduct._id)}>
+                  <FontAwesome name="history" size={20} />
+                  <Text
+                    style={[
+                      styles.updateButtonText,
+                      {color: 'black', fontWeight: '700'},
+                    ]}>
+                    History
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
+        )}
       </ScrollView>
+
+      <Modal
+        visible={ismodalvisible}
+        animationType="none"
+        transparent={true}
+        onRequestClose={() => setmodalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent]}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                width: '100%',
+              }}>
+              <Text
+                style={{
+                  fontSize: 20,
+                  textTransform: 'uppercase',
+                  fontWeight: '700',
+                }}>
+                history
+              </Text>
+              <TouchableOpacity
+                style={{alignSelf: 'flex-end'}}
+                onPress={() => setmodalVisible(false)}>
+                <AntDesign name="close" size={25} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.modalButtons]}>
+              <TouchableOpacity style={styles.modelbutton}>
+                <Text style={styles.modelbuttonText}>Total Quantity</Text>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    color: '#1b1233',
+                    fontWeight: '700',
+                  }}>
+                  {HistoryDetails?.totalQuantity || 'N/A'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modelbutton}>
+                <Text style={styles.modelbuttonText}>Available Quantity</Text>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    color: '#1b1233',
+                    fontWeight: '700',
+                  }}>
+                  {HistoryDetails?.availableQuantity || 'N/A'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{width: '100%'}}
+              contentContainerStyle={{paddingBottom: 20}}>
+              <View style={{width: '100%', alignItems: 'center'}}>
+                {Array.isArray(HistoryDetails?.history) &&
+                HistoryDetails?.history?.length > 0 ? (
+                  HistoryDetails?.history?.map((item, index) => (
+                    <View style={styles.cardStyle} key={index}>
+                      <View style={styles.historyRow}>
+                        <Text style={styles.heading}>Date</Text>
+                        <Text style={[styles.heading, {color: 'black'}]}>
+                          {new Date(item.date).toLocaleDateString() || 'N/A'}
+                        </Text>
+                      </View>
+                      <View style={styles.historyRow}>
+                        <Text style={styles.heading}>Size</Text>
+                        <Text style={[styles.heading, {color: 'black'}]}>
+                          {item.size || 'N/A'}
+                        </Text>
+                      </View>
+                      <View style={styles.historyRow}>
+                        <Text style={styles.heading}>Color</Text>
+                        <Text style={[styles.heading, {color: 'black'}]}>
+                          {item.color || 'N/A'}
+                        </Text>
+                      </View>
+                      <View style={styles.historyRow}>
+                        <Text style={styles.heading}>Quantity</Text>
+                        <Text style={[styles.heading, {color: 'black'}]}>
+                          {item.quantity || 'N/A'}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={{textAlign: 'center', marginTop: 20}}>
+                    No History Details Available
+                  </Text>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
-  noProductsContainer:{
-    marginTop:100,
-    justifyContent:'center',
-    alignItems:'center'
+  cardStyle: {
+    backgroundColor: '#fff',
+    padding: 15,
+    marginTop: 10,
+    width: '100%',
+    marginHorizontal: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5, // for Android shadow effect
+  },
+  historyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heading: {
+    // textTransform:'uppercase',
+    fontSize: 16,
+    paddingVertical: 4,
+
+    // color: 'white',
+  },
+  modelbuttonText: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#0f646f',
+    fontSize: 16,
+  },
+  modelbutton: {
+    backgroundColor: '#f4fcfe',
+    borderRadius: 10,
+    // borderWidth: 1,
+    elevation: 3,
+    // borderColor: '#ccc',
+    paddingVertical: 10,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 5,
+    width: '93%',
+    alignItems: 'center',
+  },
+
+  modalButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    marginTop: 10,
+  },
+  navigationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  addButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    borderRadius: 10,
+    flexDirection: 'row',
+    paddingVertical: 7,
+    gap: 10,
+    marginTop: 10,
+    marginRight: 15,
+    paddingHorizontal: 10,
+    backgroundColor: '#fbdd74',
+  },
+  noProductsContainer: {
+    marginTop: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   overlay: {
     position: 'absolute',
@@ -168,14 +437,14 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign:'center',
-    textTransform:"uppercase"
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   productCard: {
     backgroundColor: '#fff',
     marginHorizontal: 15,
     marginBottom: 20,
-    marginTop:10,
+    marginTop: 10,
     borderRadius: 10,
     padding: 15,
     elevation: 5,
@@ -202,13 +471,13 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   inventoryItem: {
-    marginTop: 10,
+    // marginTop: 10,
   },
   inventoryItemHeader: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#004c8c',
-    marginBottom: 10,
+    // marginBottom: 10,
   },
   inventoryRow: {
     flexDirection: 'row',
@@ -234,7 +503,11 @@ const styles = StyleSheet.create({
   updateButton: {
     backgroundColor: '#004c8c',
     padding: 10,
+    flexDirection: 'row',
+    gap: 10,
+    elevation: 5,
     borderRadius: 8,
+    paddingHorizontal: 40,
     marginTop: 15,
     alignItems: 'center',
   },
@@ -245,4 +518,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProductDetailsScreen;
+export default InventoryDetailsScreen;

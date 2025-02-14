@@ -11,7 +11,7 @@ const AadhaarVerificationScreen = ({ navigation }) => {
   const route=useRoute()
   // const { formData } = route.params as { formData:any };
   const {formData}= route.params as {formData:any}||''
-  console.log(formData)
+  
 
   // Handle Aadhaar number change
   const handleAadhaarChange = (text) => {
@@ -40,7 +40,7 @@ const AadhaarVerificationScreen = ({ navigation }) => {
         aadharInfo:{aadharNumber:aadhaarNumber, aadharName:name}
       }
       navigation.navigate('AddressDetails',{data:data});
-      console.log('Aadhaar Verified');
+    
     } else {
             
         ToastAndroid.show("Please fill out the fields correctly",ToastAndroid.SHORT)

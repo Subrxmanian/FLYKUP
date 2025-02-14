@@ -5,17 +5,17 @@ const AboutUserPage = () => {
   // Example data
   const user = {
     name: 'M.K.P.Anandh',
-    profileImage: require('../assets/images/Index.png'),
+    profileImage: require('../assets/images/makkapa3.png'),
     following: 78,
     followers: 926,
     likes: 1443,
     gallery: [
-      { id: '1', image:  require('../assets/images/Index.png'), views: '400k' },
+      { id: '1', image:  require('../assets/images/makkapa1.png'), views: '400k' },
       { id: '2', image:  require('../assets/images/profile.jpg'), views: '1.2M' },
-      { id: '3', image:  require('../assets/images/logo.png'), views: '250k' },
-      { id: '4', image:  require('../assets/images/profile.jpg'), views: '1.9M' },
+      // { id: '3', image:  require('../assets/images/logo.png'), views: '250k' },
+      { id: '4', image:  require('../assets/images/profile-5.jpg'), views: '1.9M' },
       { id: '5', image: require('../assets/images/Index.png'), views: '12k' },
-      { id: '6', image: require('../assets/images/Index.png'), views: '56k' },
+      { id: '6', image: require('../assets/images/profile-4.jpg'), views: '56k' },
     ],
   };
 
@@ -145,7 +145,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   galleryContainer: {
-    marginTop: 10,
+    marginTop: 10,bottom:10,
+    // marginBottom:30
   },
   galleryItem: {
     flex: 1,

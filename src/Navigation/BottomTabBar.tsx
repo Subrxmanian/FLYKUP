@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { BackHandler, StyleSheet, ToastAndroid } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import EvilIcons from "react-native-vector-icons/EvilIcons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -13,7 +13,33 @@ import AboutUser from "../Components/AboutUser";
 
 const Tab = createBottomTabNavigator();
 
+
 export default function BottomTabBar() {
+  const lastBackPressed = useRef(0);
+  const exitApp = () => {
+    const currentTime = Date.now();
+    const timeDiff = currentTime - lastBackPressed.current;
+
+    if (timeDiff < 2000) {
+      // If the back button is pressed within 2 seconds, exit the app
+      BackHandler.exitApp();
+    } else {
+      // Show the "Press again to exit" toast
+      ToastAndroid.show('Press again to exit', ToastAndroid.SHORT);
+      lastBackPressed.current = currentTime; // Update the last pressed time
+    }
+  };
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      exitApp(); // Call the exitApp function on back press
+      return true; // Prevent the default back behavior
+    });
+
+    return () => {
+      backHandler.remove(); // Cleanup on component unmount
+    };
+  }, []);
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({

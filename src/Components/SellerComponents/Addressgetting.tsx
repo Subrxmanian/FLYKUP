@@ -1,6 +1,5 @@
-import {setLogLevel} from '@react-native-firebase/app';
 import {useRoute} from '@react-navigation/native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -31,7 +30,7 @@ const AddressDetailsScreen = ({navigation}) => {
   const route = useRoute();
   const {data} = route.params as {formData: any};
   const [loading, setloading] = useState(false);
-
+  const [user, setuser] = useState();
   const [isSameAddress, setIsSameAddress] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -102,31 +101,63 @@ const AddressDetailsScreen = ({navigation}) => {
 
       setloading(true);
       try {
-   
-        const response = await api.post(`/user/become-seller`, {
-          userId: userid,
-          aadharInfo: data.aadharInfo,
-          basicInfo: data.basicInfo,
-          addressInfo: {
-            homeAddress: {
-             
-              addressLine1: formData.homeAddress1,
-              addressLine2: formData.homeAddress2,
-              city: formData.homeCity,
-              state: formData.homeState,
-              pincode: formData.homePincode,
+        if (user?.sellerInfo?.approvalStatus === 'rejected') {
+          const response = await api.put(`/user/become-seller/modify`, {
+            userId: userid,
+            aadharInfo: data.aadharInfo,
+            basicInfo: data.basicInfo,
+            addressInfo: {
+              homeAddress: {
+                addressLine1: formData.homeAddress1,
+                addressLine2: formData.homeAddress2,
+                city: formData.homeCity,
+                state: formData.homeState,
+                pincode: formData.homePincode,
+              },
+              sameAsOffice: isSameAddress,
+              officeAddress: {
+                addressLine1: formData.officeAddress1,
+                addressLine2: formData.officeAddress2,
+                city: formData.officeCity,
+                state: formData.officeState,
+                pincode: formData.officePincode,
+              },
             },
-            sameAsOffice: isSameAddress,
-            officeAddress: {
-              addressLine1: formData.officeAddress1,
-              addressLine2: formData.officeAddress2,
-              city: formData.officeCity,
-              state: formData.officeState,
-              pincode: formData.officePincode,
+          });
+          ToastAndroid.show(
+            'Seller Request send Successfully',
+            ToastAndroid.SHORT,
+          );
+          
+        } else {
+          const response = await api.post(`/user/become-seller`, {
+            userId: userid,
+            aadharInfo: data.aadharInfo,
+            basicInfo: data.basicInfo,
+            addressInfo: {
+              homeAddress: {
+                addressLine1: formData.homeAddress1,
+                addressLine2: formData.homeAddress2,
+                city: formData.homeCity,
+                state: formData.homeState,
+                pincode: formData.homePincode,
+              },
+              sameAsOffice: isSameAddress,
+              officeAddress: {
+                addressLine1: formData.officeAddress1,
+                addressLine2: formData.officeAddress2,
+                city: formData.officeCity,
+                state: formData.officeState,
+                pincode: formData.officePincode,
+              },
             },
-          },
-        });
-        ToastAndroid.show('Seller registered Successfully', ToastAndroid.SHORT);
+          });
+          console.log(response.data)
+          ToastAndroid.show(
+            'Seller registered Successfully',
+            ToastAndroid.SHORT,
+          );
+        }
         navigation.navigate('bottomtabbar');
       } catch (error) {
         console.log('error registering', error);
@@ -135,7 +166,21 @@ const AddressDetailsScreen = ({navigation}) => {
       }
     }
   };
+  const fetchuser = async () => {
+    // console.log(await generateSignedUrl("ProductImage/59f3f4dd-60ce-478e-bbdf-3c769662e00d_image1.JPG"))
+    try {
+      const id = (await AsyncStorage.getItem('userId')) || '';
 
+      const response = await api.get(`/user/id/${id}`);
+      setuser(response.data.data);
+    } catch (err) {
+      console.log('error fetching', err);
+    }
+  };
+  useEffect(() => {
+    fetchuser();
+  }, []);
+  // console.log(data)
   return (
     <>
       {loading ? (

@@ -15,6 +15,9 @@ import AddressDetailsScreen from '../Components/SellerComponents/Addressgetting'
 import InventoryList from '../Components/SellerComponents/AddInventory';
 import ProductUploadForm from '../Components/SellerComponents/Addproduct';
 import ProductDetailsScreen from '../Components/SellerComponents/Inventory';
+import Products from '../Components/SellerComponents/Products'
+import ViewSellerHistory from '../Components/SellerComponents/ViewSellerHistory';
+import ResetPassword from '../Components/SellerComponents/ResetPassword';
 
 const Stack = createStackNavigator();
 
@@ -29,6 +32,10 @@ export default function StackNavigate() {
       <Stack.Screen name="AddInventory" component={InventoryList}/>
       <Stack.Screen name="ProductUploadForm" component={ProductUploadForm}/>
       <Stack.Screen name="Inventory" component={ProductDetailsScreen}/>
+      <Stack.Screen name="Products" component={Products}/>
+      <Stack.Screen name="resetpassword" component={ResetPassword}/>
+
+      <Stack.Screen name="ViewSellerHistory" component={ViewSellerHistory}/>
         <Stack.Screen
           name="Index"
           component={Index}

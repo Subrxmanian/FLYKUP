@@ -33,7 +33,7 @@ const Comment = () => {
       message: 'Wow look amazing',
       time: '04.09',
       unreadCount: 0,
-      avatar: require('../assets/images/logo.png'),
+      avatar: require('../assets/images/makkapa3.png'),
     },
     {
       id: '4',
@@ -49,7 +49,7 @@ const Comment = () => {
       message: 'Is that original AI?',
       time: 'Saturday',
       unreadCount: 0,
-      avatar: require('../assets/images/profile.jpg'),
+      avatar: require('../assets/images/profile-1.jpg'),
     },
     {
       id: '6',
@@ -57,7 +57,7 @@ const Comment = () => {
       message: 'Have a nice day',
       time: 'Monday',
       unreadCount: 1,
-      avatar:require('../assets/images/logo.png'),
+      avatar:require('../assets/images/profile-3.jpg'),
     },
   ]);
 
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 25,
     borderBottomWidth:1,
     borderBottomColor:'#ccc'
   },
@@ -154,6 +154,7 @@ const styles = StyleSheet.create({
   },
   chatDetails: {
     flex: 1,
+    marginBottom:15,
   },
   name: {
     fontSize: 16,

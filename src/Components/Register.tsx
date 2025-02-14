@@ -16,20 +16,18 @@ const RegistrationScreen = () => {
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpIndex, setOtpIndex] = useState(0);
-
+  const [timeLeft, setTimeLeft] = useState(0);  // Time left for OTP resend
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
   const Navigation = useNavigation();
 
-  // Password validation to include lowercase, uppercase, and special character
   const validatePassword = (password: string) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{6,}$/; // At least 1 lowercase, 1 uppercase, and 1 special character
     return regex.test(password);
   };
 
-  // Validation functions
   const validateName = (name: string) => name.length > 0;
   const validateEmail = (email: string) => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
   
@@ -37,20 +35,31 @@ const RegistrationScreen = () => {
     setNameError(validateName(name) ? '' : 'Name is required.');
     setEmailError(validateEmail(email) ? '' : 'Invalid email.');
     setPasswordError(validatePassword(password) ? '' : 'Password must contain at least one uppercase, one lowercase, and one special character.');
-
     return validateName(name) && validateEmail(email) && validatePassword(password);
   };
 
-  // Handle Resend OTP
   const handleResendOtp = async () => {
+    if (timeLeft > 0) return;  // Don't resend if time left > 0
+
     setLoading(true);
     try {
-      console.log(email);
       const response = await api.post('/auth/resend-otp', {
         emailId: email
       });
 
       ToastAndroid.show("OTP has been resent!", ToastAndroid.SHORT);
+      setTimeLeft(30);  // Start countdown after resend
+
+      // Start countdown timer
+      const countdownInterval = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);  // Clear interval when countdown ends
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);  // Decrease time every second
     } catch (error) {
       console.log("Error not valid otp", error);
     } finally {
@@ -60,7 +69,6 @@ const RegistrationScreen = () => {
     }
   };
 
-  // Handle Verify OTP
   const handleVerifyOtp = async () => {
     setLoading(true);
     try {
@@ -68,6 +76,7 @@ const RegistrationScreen = () => {
         emailId: email, otp: otp.join('')
       });
       Navigation.navigate("Login" as never);
+      setOtpModalVisible(false)
       ToastAndroid.show("Successfully Registered", ToastAndroid.SHORT);
     } catch (error) {
       console.log("Error not valid otp", error);
@@ -105,18 +114,15 @@ const RegistrationScreen = () => {
   const handlePincodeChange = (index: number, text: string) => {
     const newPincode = [...otp];
     newPincode[index] = text.replace(/[^0-9]/g, '');
-    // handleOtpChange(newPincode, index)
-    setOtp(newPincode)
-    // Move to next input if a digit is entered
+    setOtp(newPincode);
     if (text && index < 5) {
-      // setActiveIndex(index + 1);
       otpRef.current[index + 1]?.focus();
     }
   };
+
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === 'Backspace') {
       if (!otp[index] && index > 0) {
-        // setActiveIndex(index - 1);
         otpRef.current[index - 1]?.focus();
       }
     }
@@ -128,15 +134,8 @@ const RegistrationScreen = () => {
 
   return (
     <View style={styles.container}>
-    
-
       <View style={styles.card}>
-        <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-          <Text style={styles.title}>Register</Text>
-          {/* <TouchableOpacity style={{borderRadius:30,borderWidth:1,padding:5,alignItems:'center',width:40,justifyContent:'center'}}>
-            <Text style={{fontWeight:'700'}}>✕</Text>
-          </TouchableOpacity> */}
-          </View>
+        <Text style={styles.title}>Register</Text>
         <TextInput
           style={[styles.input, nameError && styles.inputError]}
           placeholder="Name"
@@ -174,9 +173,9 @@ const RegistrationScreen = () => {
         <TouchableOpacity style={styles.button} onPress={handleSubmit}>
           {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Register</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={{ alignSelf: 'center', marginBottom: 15,marginTop:10 }} onPress={() => Navigation.goBack()}>
-        <Text style={{ fontSize: 14 }}>Already have an account?<Text style={{ color: 'blue' }}> Sign In</Text></Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={{ alignSelf: 'center', marginBottom: 15, marginTop: 10 }} onPress={() => Navigation.goBack()}>
+          <Text style={{ fontSize: 14 }}>Already have an account?<Text style={{ color: 'blue' }}> Sign In</Text></Text>
+        </TouchableOpacity>
       </View>
 
       <Modal
@@ -200,16 +199,17 @@ const RegistrationScreen = () => {
                   maxLength={1}
                   value={digit}
                   onChangeText={(value) => handlePincodeChange(index, value)}
-              onKeyPress={e => handleKeyPress(e, index)}
-              keyboardType="numeric"
-          
-              ref={(el) => (otpRef.current[index] = el)}
+                  onKeyPress={e => handleKeyPress(e, index)}
+                  keyboardType="numeric"
+                  ref={(el) => (otpRef.current[index] = el)}
                   autoFocus={index === otpIndex}
                 />
               ))}
             </View>
-            <TouchableOpacity onPress={handleResendOtp}>
-              <Text style={styles.resendText}>Resend OTP</Text>
+            <TouchableOpacity onPress={handleResendOtp} disabled={timeLeft > 0}>
+              <Text style={styles.resendText}>
+                {timeLeft > 0 ? `Resend OTP in ${timeLeft}s` : 'Resend OTP'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.button} onPress={handleVerifyOtp}>
               {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Verify OTP</Text>}
@@ -217,8 +217,6 @@ const RegistrationScreen = () => {
           </View>
         </View>
       </Modal>
-
-    
     </View>
   );
 };
@@ -243,7 +241,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     marginBottom: 20,
-    // textAlign: 'center',
     fontWeight: 'bold',
   },
   input: {
@@ -302,7 +299,6 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

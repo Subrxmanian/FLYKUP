@@ -7,7 +7,7 @@ const likeData = [
     name: 'Daffa Kereh',
     time: '39m',
     message: 'From your contact is on HackLife as daffa_cabul.',
-    image: require('../assets/images/logo.png'), // Replace with actual image
+    image: require('../assets/images/makkapa1.png'), 
     follow: true,
   },
   {
@@ -15,7 +15,7 @@ const likeData = [
     name: 'Fridolina Chang',
     time: '1h',
     message: 'From your contact is on HackLife as linaaselele.',
-    image: require('../assets/images/logo.png'),
+    image: require('../assets/images/profile-1.jpg'),
     follow: true,
   },
   {
@@ -23,7 +23,7 @@ const likeData = [
     name: 'Fridolina and others',
     time: '4h',
     message: 'Liked your videos.',
-    image: require('../assets/images/logo.png'),
+    image: require('../assets/images/profile-2.jpg'),
     follow: false,
   },
   {
@@ -31,7 +31,7 @@ const likeData = [
     name: 'Mahmud',
     time: '12h',
     message: 'Liked your videos.',
-    image: require('../assets/images/logo.png'),
+    image: require('../assets/images/profile-3.jpg'),
     follow: true,
   },
 ];
@@ -39,7 +39,7 @@ const likeData = [
 const LikeScreen = () => {
   const renderItem = ({ item }) => (
     <View style={styles.itemContainer}>
-      <Image source={require('../assets/images/profile.jpg')} style={styles.userImage} />
+      <Image source={item.image} style={styles.userImage} />
       <View style={styles.textContainer}>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.message}>{item.message}</Text>
