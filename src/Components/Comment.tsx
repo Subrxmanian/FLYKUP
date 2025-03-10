@@ -33,7 +33,7 @@ const Comment = () => {
       message: 'Wow look amazing',
       time: '04.09',
       unreadCount: 0,
-      avatar: require('../assets/images/logo.png'),
+      avatar: require('../assets/images/makkapa3.png'),
     },
     {
       id: '4',
@@ -49,7 +49,7 @@ const Comment = () => {
       message: 'Is that original AI?',
       time: 'Saturday',
       unreadCount: 0,
-      avatar: require('../assets/images/profile.jpg'),
+      avatar: require('../assets/images/profile-1.jpg'),
     },
     {
       id: '6',
@@ -57,7 +57,7 @@ const Comment = () => {
       message: 'Have a nice day',
       time: 'Monday',
       unreadCount: 1,
-      avatar:require('../assets/images/logo.png'),
+      avatar:require('../assets/images/profile-3.jpg'),
     },
   ]);
 
@@ -81,6 +81,13 @@ const Comment = () => {
   );
 
   return (
+    <>
+      <View style={styles.overlay}>
+                  <View style={styles.overlayContainer}>
+                 
+                    <Text style={styles.loadingText}>Comming Soon</Text>
+                  </View>
+                </View>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -100,10 +107,35 @@ const Comment = () => {
         style={styles.chatList}
       />
     </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  overlayContainer: {
+    // backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  loadingText: {
+    fontSize: 16,
+    marginLeft: 10,
+    color: 'white',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -142,7 +174,7 @@ const styles = StyleSheet.create({
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 25,
     borderBottomWidth:1,
     borderBottomColor:'#ccc'
   },
@@ -154,6 +186,7 @@ const styles = StyleSheet.create({
   },
   chatDetails: {
     flex: 1,
+    marginBottom:15,
   },
   name: {
     fontSize: 16,
