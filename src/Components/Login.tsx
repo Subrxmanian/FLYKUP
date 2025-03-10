@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 import React, {useState} from 'react';
 import {
   View,
@@ -7,71 +8,81 @@ import {
   StyleSheet,
   Image,
   ToastAndroid,
-  Alert,
 } from 'react-native';
 import {ActivityIndicator, Checkbox} from 'react-native-paper';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import auth from '@react-native-firebase/auth';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
-import {GOOGLE_CLIENT_ID} from '../../Config';
-import SkeletonContent from 'react-native-skeleton-content';
+import auth from '@react-native-firebase/auth';
 import api from '../Utils/Api';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [user, setUser] = useState(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setloading] = useState(false);
   const Navigation = useNavigation();
-  GoogleSignin.configure({
-    webClientId:
-      '383052907259-4rosji441qbu9m1f4lstfvrl9ann60lv.apps.googleusercontent.com',
-  });
-
+ 
   async function onGoogleButtonPress() {
-    try {
-      
-      // Check if your device supports Google Play services
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      
-      // Get the users ID token
-      const { idToken } = await GoogleSignin.signIn();
-      
-      // Create a Google credential with the token
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-      
-      // Sign-in the user with the credential
-      return auth().signInWithCredential(googleCredential);
-    } catch (error) {
-      console.error('Google Sign-In Error:', error);
-      if (error.code === 'DEVELOPER_ERROR') {
-        ToastAndroid.show('Please check your Google configuration', ToastAndroid.SHORT);
-      }
+    // Check if your device supports Google Play
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Get the users ID token
+    const signInResult = await GoogleSignin.signIn();
+    // console.log(signInResult);
+
+    const idToken = signInResult.data?.idToken;
+    const userDetails = signInResult.data?.user
+        
+    if (!idToken) {
+      throw new Error('No ID token found');
     }
+    //login(signInResult.data);
+    // Create a Google credential with the token auth().signInWithCredential(googleCredential)
+    const googleCredential = auth.GoogleAuthProvider.credential(signInResult.data.idToken);
+    // console.log(googleCredential)
+    try{
+      const response= await api.post(`/auth/google`,{
+        name: userDetails?.name,
+        emailId: userDetails?.email,
+        profileURL: userDetails?.photo,
+        isLogin: googleCredential,
+      })
+      // console.log(response.data.data)
+      // if(rememberMe){
+        AsyncStorage.setItem("userName",response.data.data.userName)
+      // }
+      AsyncStorage.setItem("userId",response.data.data._id)
+      // console.log(response.data.data.sellerInfo)
+      if(response.data.data.sellerInfo){
+      AsyncStorage.setItem("sellerId",response.data.data.sellerInfo)}
+        ToastAndroid.show('successfully Logined ', ToastAndroid.SHORT);
+        Navigation.navigate("bottomtabbar" as never)
+    }catch(error){
+      console.log(error)
+    } 
   }
-  // Facebook Sign-In
+  
+
   async function onFacebookButtonPress() {
-    // console.log(auth().createUserWithEmailAndPassword("test@gmail.com","pasword").then(()=>Alert.alert("usercreaed"))).catch((err)=>{
-    //   console.log(err)
-    // })
-    // return
     // Attempt login with permissions
-  try{
     const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
   
     if (result.isCancelled) {
       throw 'User cancelled the login process';
     }
   
+    console.log(result);
     // Once signed in, get the users AccessToken
     const data = await AccessToken.getCurrentAccessToken();
+
+    console.log('Facebook Token:', data);
   
     if (!data) {
       throw 'Something went wrong obtaining access token';
@@ -79,13 +90,8 @@ export default function Login() {
   
     // Create a Firebase credential with the AccessToken
     const facebookCredential = auth.FacebookAuthProvider.credential(data.accessToken);
-  
     // Sign-in the user with the credential
     return auth().signInWithCredential(facebookCredential);
-  }catch(error)
-  {
-    console.error(error)
-  }
   }
 
   // Email validation function
@@ -117,22 +123,26 @@ export default function Login() {
     if (passwordError && emailError) return;
     setloading(true);
     try {
+      // console.log( {
+      //   emailId: email,
+      //   password: password,
+      // })
       const response = await api.post(`/auth/login`, {
         emailId: email,
         password: password,
       });
+      // console.log(response.data)
       
       // console.log("data",response.data.data._id);
       if(rememberMe){
       AsyncStorage.setItem("userName",response.data.data.userName)
-    
     }
     AsyncStorage.setItem("userId",response.data.data._id)
+    // console.log(response.data.data.sellerInfo)
     if(response.data.data.sellerInfo){
-    
     AsyncStorage.setItem("sellerId",response.data.data.sellerInfo)}
-      ToastAndroid.show('successfully Logined. ', ToastAndroid.SHORT);
-      Navigation.navigate("bottomtabbar")
+      ToastAndroid.show('successfully Logined ', ToastAndroid.SHORT);
+      Navigation.navigate("bottomtabbar" as never)
     } catch (error) {
       ToastAndroid.show("Invalid password or Email Id ",ToastAndroid.LONG)
       console.log('error while logining', error);
@@ -144,7 +154,7 @@ export default function Login() {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/images/logo.png')} // Update with your image URL
+        source={require('../assets/images/logo.png')} 
         style={styles.headerImage}
       />
 
@@ -208,7 +218,7 @@ export default function Login() {
             <Text style={styles.rememberMeText}>Remember me</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={()=>Navigation.navigate("resetpassword" as never)}>
           <Text style={styles.forgotPasswordText}>Forgot password?</Text>
         </TouchableOpacity>
       </View>
@@ -223,24 +233,44 @@ export default function Login() {
         <Text style={[styles.buttonText, {color: 'black'}]}>Register</Text>
       </TouchableOpacity>
 
-      <Text style={styles.socialMediaText}>Sign in with social media</Text>
+      <Text style={styles.socialMediaText}>Or continue with</Text>
 
       <View style={styles.socialButtonsContainer}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.socialButton}
-          onPress={() => console.log('Sign in with Apple')}>
+          onPress={() => {
+            ToastAndroid.show('Please Login using Email and Password.  ', ToastAndroid.SHORT)
+            // return
+          }}>
           <AntDesign name="apple1" size={23} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <TouchableOpacity
-          style={[styles.socialButton, {borderColor: 'red'}]}
+          style={[styles.socialButton]}
           onPress={onGoogleButtonPress}>
-          <AntDesign name="google" size={23} color="red" />
+          {/* <AntDesign name="google" size={23} color="red" />
+           */}
+           <View style={{backgroundColor:'#fff',
+            padding:3,
+            borderRadius:20}}>
+           <Image  source={require('../assets/images/google.png')} style={{width:20,height:20}}/>
+            </View>
+           <Text style={{color:'white',fontWeight:'600'}}>Sigin with Google</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        {/* <TouchableOpacity style={[styles.socialButton]}
+          onPress={onFacebookButtonPress}>
+        <View style={{backgroundColor:'#fff',
+            padding:3,
+            borderRadius:20}}>
+           
+          <AntDesign name="facebook-square" size={23} color="blue" />
+            </View>
+           <Text style={{color:'white',fontWeight:'600'}}>Sigin with Facebook</Text>
+        </TouchableOpacity> */}
+        
+        {/* <TouchableOpacity
           style={[styles.socialButton, {borderColor: 'blue'}]}
           onPress={onFacebookButtonPress}>
-          <AntDesign name="facebook-square" size={23} color="blue" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
       {/* <View style={{flex:1}}/> */}
 
@@ -332,18 +362,24 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   socialButtonsContainer: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
     justifyContent: 'center',
     gap: 5,
-    width: '100%',
+    // width: '50%',
+    
     marginBottom: 20,
     marginTop: 10,
   },
   socialButton: {
-    width: 50,
+    // width: 50,
+    flexDirection:'row',
+    justifyContent:'space-between',
+
+    gap:10,
+    paddingHorizontal:10,
+    backgroundColor:'#1a73e8',
     padding: 10,
     alignItems: 'center',
-    borderWidth: 1,
     borderRadius: 35,
   },
   termsText: {

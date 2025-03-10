@@ -1,6 +1,5 @@
-import {setLogLevel} from '@react-native-firebase/app';
 import {useRoute} from '@react-navigation/native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -11,10 +10,11 @@ import {
   TouchableOpacity,
   ToastAndroid,
 } from 'react-native';
-import {ActivityIndicator, Checkbox, overlay} from 'react-native-paper';
+import {ActivityIndicator, Checkbox} from 'react-native-paper';
 import api from '../../Utils/Api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import {Subheader} from 'react-native-paper/lib/typescript/components/List/List';
 const AddressDetailsScreen = ({navigation}) => {
   const [formData, setFormData] = useState({
     officeAddress1: '',
@@ -31,7 +31,7 @@ const AddressDetailsScreen = ({navigation}) => {
   const route = useRoute();
   const {data} = route.params as {formData: any};
   const [loading, setloading] = useState(false);
-
+  const [user, setuser] = useState();
   const [isSameAddress, setIsSameAddress] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -102,40 +102,97 @@ const AddressDetailsScreen = ({navigation}) => {
 
       setloading(true);
       try {
-   
-        const response = await api.post(`/user/become-seller`, {
-          userId: userid,
-          aadharInfo: data.aadharInfo,
-          basicInfo: data.basicInfo,
-          addressInfo: {
-            homeAddress: {
-             
-              addressLine1: formData.homeAddress1,
-              addressLine2: formData.homeAddress2,
-              city: formData.homeCity,
-              state: formData.homeState,
-              pincode: formData.homePincode,
+        if (user?.sellerInfo?.approvalStatus === 'rejected') {
+          const response = await api.put(`/user/become-seller/modify`, {
+            userId: userid,
+            aadharInfo: data.aadharInfo,
+            basicInfo: data.basicInfo,
+            addressInfo: {
+              homeAddress: {
+                addressLine1: formData.homeAddress1,
+                addressLine2: formData.homeAddress2,
+                city: formData.homeCity,
+                state: formData.homeState,
+                pincode: formData.homePincode,
+              },
+              sameAsOffice: isSameAddress,
+              officeAddress: {
+                addressLine1: formData.officeAddress1,
+                addressLine2: formData.officeAddress2,
+                city: formData.officeCity,
+                state: formData.officeState,
+                pincode: formData.officePincode,
+              },
             },
-            sameAsOffice: isSameAddress,
-            officeAddress: {
-              addressLine1: formData.officeAddress1,
-              addressLine2: formData.officeAddress2,
-              city: formData.officeCity,
-              state: formData.officeState,
-              pincode: formData.officePincode,
+          });
+          ToastAndroid.show(
+            'Seller Request send Successfully',
+            ToastAndroid.SHORT,
+          );
+        } else {
+          const response = await api.post(`/user/become-seller`, {
+            userId: userid,
+            aadharInfo: data.aadharInfo,
+            basicInfo: data.basicInfo,
+            addressInfo: {
+              homeAddress: {
+                addressLine1: formData.homeAddress1,
+                addressLine2: formData.homeAddress2,
+                city: formData.homeCity,
+                state: formData.homeState,
+                pincode: formData.homePincode,
+              },
+              sameAsOffice: isSameAddress,
+              officeAddress: {
+                addressLine1: formData.officeAddress1,
+                addressLine2: formData.officeAddress2,
+                city: formData.officeCity,
+                state: formData.officeState,
+                pincode: formData.officePincode,
+              },
             },
-          },
-        });
-        ToastAndroid.show('Seller registered Successfully', ToastAndroid.SHORT);
+          });
+          // console.log(response.data.data.sellerInfo._id)
+          // AsyncStorage.setItem("")
+          ToastAndroid.show(
+            'Seller registered Successfully',
+            ToastAndroid.SHORT,
+          );
+        }
         navigation.navigate('bottomtabbar');
-      } catch (error) {
+      } catch (error: any) {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          const backendMessage = error.response.data.message; // If the message is in response.data.message
+          ToastAndroid.show(backendMessage, ToastAndroid.SHORT);
+        } else if (error.message) {
+          // If the error message is directly on the error object
+          ToastAndroid.show(error.message, ToastAndroid.SHORT);
+        }
         console.log('error registering', error);
       } finally {
         setloading(false);
       }
     }
   };
+  const fetchuser = async () => {
+    // console.log(await generateSignedUrl("ProductImage/59f3f4dd-60ce-478e-bbdf-3c769662e00d_image1.JPG"))
+    try {
+      const id = (await AsyncStorage.getItem('userId')) || '';
 
+      const response = await api.get(`/user/id/${id}`);
+      setuser(response.data.data);
+    } catch (err) {
+      console.log('error fetching', err);
+    }
+  };
+  useEffect(() => {
+    fetchuser();
+  }, []);
+  // console.log(data)
   return (
     <>
       {loading ? (
@@ -159,134 +216,151 @@ const AddressDetailsScreen = ({navigation}) => {
 
           <View style={styles.form}>
             {/* Office Address */}
-            <Text style={styles.label}>Office Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Address Line 1"
-              value={formData.officeAddress1}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('officeAddress1', value)}
-            />
-            {errors.officeAddress1 && (
-              <Text style={styles.errorText}>{errors.officeAddress1}</Text>
-            )}
+            <View style={styles.card}>
+              <View style={styles.subHeader}>
+                <MaterialIcons name="apartment" color="blue" size={28} />
+                <Text style={styles.subHeaderText}>Office Address</Text>
+              </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Address Line 2"
-              value={formData.officeAddress2}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('officeAddress2', value)}
-            />
-            {errors.officeAddress2 && (
-              <Text style={styles.errorText}>{errors.officeAddress2}</Text>
-            )}
-
-            <TextInput
-              style={styles.input}
-              placeholder="City"
-              value={formData.officeCity}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('officeCity', value)}
-            />
-            {errors.officeCity && (
-              <Text style={styles.errorText}>{errors.officeCity}</Text>
-            )}
-
-            <TextInput
-              style={styles.input}
-              placeholder="State"
-              value={formData.officeState}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('officeState', value)}
-            />
-            {errors.officeState && (
-              <Text style={styles.errorText}>{errors.officeState}</Text>
-            )}
-
-            <TextInput
-              style={styles.input}
-              placeholder="Pincode"
-              placeholderTextColor={'#777'}
-              value={formData.officePincode}
-              keyboardType="numeric"
-              onChangeText={value => handleInputChange('officePincode', value)}
-            />
-            {errors.officePincode && (
-              <Text style={styles.errorText}>{errors.officePincode}</Text>
-            )}
-
-            {/* Same as Office Address Checkbox */}
-            <Text style={styles.label}>Home Address</Text>
-            <View style={styles.checkboxContainer}>
-              <Checkbox
-                status={isSameAddress ? 'checked' : 'unchecked'}
-                onPress={handleCheckboxToggle}
+              <Text style={styles.label}>Address Line 1</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., 123 Main Street"
+                value={formData.officeAddress1}
+                placeholderTextColor={'#777'}
+                onChangeText={value =>
+                  handleInputChange('officeAddress1', value)
+                }
               />
-              <Text style={styles.checkboxLabel}>Same as Office Address</Text>
+              {errors.officeAddress1 && (
+                <Text style={styles.errorText}>{errors.officeAddress1}</Text>
+              )}
+              <Text style={styles.label}>Address Line 1</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., Apartment, Suite, Unit, Building etc.,"
+                value={formData.officeAddress2}
+                placeholderTextColor={'#777'}
+                onChangeText={value =>
+                  handleInputChange('officeAddress2', value)
+                }
+              />
+              {errors.officeAddress2 && (
+                <Text style={styles.errorText}>{errors.officeAddress2}</Text>
+              )}
+              <Text style={styles.label}>City </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., Chennai"
+                value={formData.officeCity}
+                placeholderTextColor={'#777'}
+                onChangeText={value => handleInputChange('officeCity', value)}
+              />
+              {errors.officeCity && (
+                <Text style={styles.errorText}>{errors.officeCity}</Text>
+              )}
+              <Text style={styles.label}>State </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., Tamil Nadu"
+                value={formData.officeState}
+                placeholderTextColor={'#777'}
+                onChangeText={value => handleInputChange('officeState', value)}
+              />
+              {errors.officeState && (
+                <Text style={styles.errorText}>{errors.officeState}</Text>
+              )}
+              <Text style={styles.label}>Pincode</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="eg., 600 001"
+                placeholderTextColor={'#777'}
+                value={formData.officePincode}
+                keyboardType="numeric"
+                onChangeText={value =>
+                  handleInputChange('officePincode', value)
+                }
+              />
+              {errors.officePincode && (
+                <Text style={styles.errorText}>{errors.officePincode}</Text>
+              )}
             </View>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Address Line 1"
-              value={formData.homeAddress1}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('homeAddress1', value)}
-            />
-            {errors.homeAddress1 && (
-              <Text style={styles.errorText}>{errors.homeAddress1}</Text>
-            )}
-
-            <TextInput
-              style={styles.input}
-              placeholder="Address Line 2"
-              value={formData.homeAddress2}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('homeAddress2', value)}
-            />
-            {errors.homeAddress2 && (
-              <Text style={styles.errorText}>{errors.homeAddress2}</Text>
-            )}
-
-            <TextInput
-              style={styles.input}
-              placeholder="City"
-              value={formData.homeCity}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('homeCity', value)}
-            />
-            {errors.homeCity && (
-              <Text style={styles.errorText}>{errors.homeCity}</Text>
-            )}
-
-            <TextInput
-              style={styles.input}
-              placeholder="State"
-              value={formData.homeState}
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('homeState', value)}
-            />
-            {errors.homeState && (
-              <Text style={styles.errorText}>{errors.homeState}</Text>
-            )}
-
-            <TextInput
-              style={styles.input}
-              placeholder="Pincode"
-              value={formData.homePincode}
-              keyboardType="numeric"
-              placeholderTextColor={'#777'}
-              onChangeText={value => handleInputChange('homePincode', value)}
-            />
-            {errors.homePincode && (
-              <Text style={styles.errorText}>{errors.homePincode}</Text>
-            )}
+            <View style={styles.card}>
+              <View style={styles.subHeader}>
+                <MaterialIcons name="apartment" color="blue" size={28} />
+                <Text style={styles.subHeaderText}>Home Address</Text>
+              </View>
+              <View style={styles.checkboxContainer}>
+                <Checkbox
+                  status={isSameAddress ? 'checked' : 'unchecked'}
+                  color={isSameAddress ? 'green' : 'black'}
+                  onPress={handleCheckboxToggle}
+                />
+                <Text style={styles.checkboxLabel}>Same as Office Address</Text>
+              </View>
+              <Text style={styles.label}>Address Line 1</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., 123 Main Street"
+                value={formData.homeAddress1}
+                placeholderTextColor={'#777'}
+                onChangeText={value => handleInputChange('homeAddress1', value)}
+              />
+              {errors.homeAddress1 && (
+                <Text style={styles.errorText}>{errors.homeAddress1}</Text>
+              )}
+              <Text style={styles.label}>Address Line 2</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., Apartment, Suite, Unit, Building etc.,"
+                value={formData.homeAddress2}
+                placeholderTextColor={'#777'}
+                onChangeText={value => handleInputChange('homeAddress2', value)}
+              />
+              {errors.homeAddress2 && (
+                <Text style={styles.errorText}>{errors.homeAddress2}</Text>
+              )}
+              <Text style={styles.label}>City</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., Chennai"
+                value={formData.homeCity}
+                placeholderTextColor={'#777'}
+                onChangeText={value => handleInputChange('homeCity', value)}
+              />
+              {errors.homeCity && (
+                <Text style={styles.errorText}>{errors.homeCity}</Text>
+              )}
+              <Text style={styles.label}>State</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., Tamil Nadu"
+                value={formData.homeState}
+                placeholderTextColor={'#777'}
+                onChangeText={value => handleInputChange('homeState', value)}
+              />
+              {errors.homeState && (
+                <Text style={styles.errorText}>{errors.homeState}</Text>
+              )}
+              <Text style={styles.label}>Pincode</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="eg., 600 007"
+                value={formData.homePincode}
+                keyboardType="numeric"
+                placeholderTextColor={'#777'}
+                onChangeText={value => handleInputChange('homePincode', value)}
+              />
+              {errors.homePincode && (
+                <Text style={styles.errorText}>{errors.homePincode}</Text>
+              )}
+            </View>
           </View>
-
           <View style={styles.buttons}>
             <TouchableOpacity
               onPress={() => navigation.goBack()}
-              style={styles.backButton}>
+              style={[styles.backButton,{backgroundColor:'#eff6ff'}]}>
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleContinue} style={styles.button}>
@@ -300,6 +374,24 @@ const AddressDetailsScreen = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
+  card:{
+    borderRadius:15,
+    elevation:4,
+    backgroundColor:'#eff6ff',
+    paddingVertical:10,
+    paddingHorizontal:10,
+    marginBottom:10,
+  },
+  subHeader: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  subHeaderText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   overlayContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -334,24 +426,26 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   backButton: {
-    paddingHorizontal: 10,
-    backgroundColor: 'rgb(59 130 246 / .5)',
+    paddingHorizontal: 20,
     paddingVertical: 10,
+    borderRadius:10,
   },
   backButtonText: {
     color: 'rgb(37 99 235)',
     fontSize: 16,
   },
   container: {
-    flex: 1,
+    // flex: 1,
     padding: 20,
+    backgroundColor:'#fff'
   },
   scrollView: {
     flexGrow: 1,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
+    marginTop:10,
   },
   progress: {
     flexDirection: 'row',
@@ -372,7 +466,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   form: {
-    marginBottom: 30,
+    marginBottom: 10,
   },
   label: {
     fontSize: 16,
@@ -382,14 +476,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     height: 50,
-    borderColor: '#777',
+    borderColor: '#ccc',
     padding: 10,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   checkboxLabel: {
     fontSize: 16,

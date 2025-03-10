@@ -1,4 +1,5 @@
-import React, {useEffect, useState} from 'react';
+/* eslint-disable react-native/no-inline-styles */
+import React, {act, useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -14,31 +15,46 @@ import {Dropdown} from 'react-native-element-dropdown';
 import {launchImageLibrary} from 'react-native-image-picker';
 import Video from 'react-native-video';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import api from '../../Utils/Api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  generateSignedUrl,
+  uploadImageToS3,
+  uploadVideoToS3,
+} from '../../Utils/aws';
+import Header from './Header';
 
 const ProductUploadForm = () => {
   const [selectedProduct, setSelectedProduct] = useState({});
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
   const [loading, setloading] = useState(false);
-  const [products, setProducts] = useState([{label: 'No Data Found'}]);
+  const [products, setProducts] = useState([{inventoryName: 'No Data Found'}]);
   const [sellingPrice, setSellingPrice] = useState('');
+  const [productWeight, setProductWeight] = useState('');
+  const [measurement, setMeasurement] = useState('');
   const [actualPrice, setActualPrice] = useState('');
-  const Navigation = useNavigation()
+  const Navigation = useNavigation();
+  const route = useRoute();
+  const {id} =
+    (route.params as {
+      id: string;
+    }) || '';
   const [categories, setCategories] = useState([
     {categoryName: 'No Data Found'},
   ]);
-  const [image, setImage] = useState(null);
-  const [video, setVideo] = useState(null);
+  const [image, setImage] = useState('');
+  const [video, setVideo] = useState('');
+  const [imageUrl, setImageUrl] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
   const [videoDurationError, setVideoDurationError] = useState('');
   const [priceError, setPriceError] = useState('');
 
-  const selectMedia = type => {
+  const selectMedia = async type => {
     const options = {mediaType: type, quality: 1};
 
-    launchImageLibrary(options, response => {
+    launchImageLibrary(options, async response => {
       if (response.didCancel) return;
       if (response.errorMessage) {
         console.error('Image Picker Error: ', response.errorMessage);
@@ -46,14 +62,27 @@ const ProductUploadForm = () => {
       }
 
       if (type === 'photo') {
+        setloading(true);
         setImage(response.assets[0].uri);
+        console.log(image, 'ProductImage');
+        const url =
+          (await uploadImageToS3(response.assets[0].uri, 'ProductImage')) || '';
+          // console.log(url)
+        setImageUrl(url);
+        setloading(false);
+        // console.log()
       } else if (type === 'video') {
         setVideo(response.assets[0].uri);
-        // Validate the video duration (for video, 'duration' is available in response)
         const videoDuration = response.assets[0].duration; // Duration in seconds
         if (videoDuration > 30) {
           setVideoDurationError('Video duration should be under 30 seconds.');
         } else {
+          setloading(true);
+          const url =
+            (await uploadVideoToS3(response.assets[0].uri, 'ProductVideo')) ||
+            '';
+          setVideoUrl(url);
+          setloading(false);
           setVideoDurationError('');
         }
       }
@@ -61,27 +90,77 @@ const ProductUploadForm = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedProduct || !selectedCategory || !image || !video) {
+    if (!id) {
+      if (!/^\d+$/.test(actualPrice) || !/^\d+$/.test(sellingPrice)) {
+        setPriceError('Prices should contain only numbers.');
+        return;
+      } else if (parseInt(sellingPrice) > parseInt(actualPrice)) {
+        setPriceError('Selling price cannot be higher than the actual price.');
+        return;
+      } else {
+        setPriceError('');
+      }
+      if (
+        !selectedProduct ||
+        !selectedCategory ||
+        !imageUrl ||
+        !videoUrl ||
+        !selectedSubCategory
+      ) {
+        ToastAndroid.show(
+          'Please complete all fields before submitting.',
+          ToastAndroid.SHORT,
+        );
+        return;
+      }
+    }
+    if (!weight && !measurement) {
       ToastAndroid.show(
-        'Please complete all fields before submitting.',
+        'Fill the Weight and measurement details',
         ToastAndroid.SHORT,
       );
       return;
     }
-
     // Price validation
-    if (!/^\d+$/.test(actualPrice) || !/^\d+$/.test(sellingPrice)) {
-      setPriceError('Prices should contain only numbers.');
-      return;
-    } else {
-      setPriceError('');
-    }
 
     setloading(true);
     try {
-      const response = await api.post(`/seller/product/add`, {
-        // submit product details
-      });
+      const id1 = (await AsyncStorage.getItem('sellerId')) || '';
+      if (!id) {
+        const response = await api.post(`/seller/product/add`, {
+          sellerInfo: id1,
+          inventoryInfo: selectedProduct?._id,
+          productName: selectedProduct?.inventoryName,
+          description: selectedProduct?.description,
+          category: selectedCategory,
+          subCategory: selectedSubCategory,
+          totalQuantity: selectedProduct?.totalQuantity,
+          actualPrice: actualPrice,
+          sellingPrice: sellingPrice,
+          photoUrl: imageUrl,
+          videoUrl: videoUrl,
+          additionalInfo: selectedProduct?.inventory,
+          productWeight: productWeight + measurement,
+        });
+      } else {
+        const response = await api.put(`/seller/product/edit/${id}`, {
+          sellerInfo: id1,
+          inventoryInfo: selectedProduct?._id,
+          productName: selectedProduct?.inventoryName,
+          description: selectedProduct?.description,
+          category: selectedCategory,
+          subCategory: selectedSubCategory,
+          totalQuantity: selectedProduct?.totalQuantity,
+          actualPrice: actualPrice,
+          sellingPrice: sellingPrice,
+          photoUrl: imageUrl,
+          videoUrl: videoUrl,
+          additionalInfo: selectedProduct?.inventory,
+          productWeight: productWeight + measurement,
+        });
+      }
+      Navigation.navigate('Products' as never);
+      ToastAndroid.show('successfully Product Added. ', ToastAndroid.SHORT);
     } catch (err) {
       console.log('Error adding product', err);
     } finally {
@@ -92,16 +171,25 @@ const ProductUploadForm = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       setloading(true);
+
       try {
         const id = await AsyncStorage.getItem('sellerId');
-       
+        // console.log('seeler ID', id);
+
         if (id) {
           const categoryResponse = await api.get('/categories/get');
+          // const allProduct = await api.get('/seller/product/all');
+
           const productResponse = await api.get(
             `/seller/inventory/by-seller/${id}`,
           );
+          const products = productResponse.data.data;
+          const filteredProducts = products.filter(
+            product => !product.isProductListed,
+          );
+
           setCategories(categoryResponse.data);
-          setProducts(productResponse.data.data);
+          setProducts(filteredProducts);
         }
       } catch (err) {
         console.log('Failed to fetch categories & products', err);
@@ -112,7 +200,49 @@ const ProductUploadForm = () => {
 
     fetchCategories();
   }, []);
+  const weight = [
+    {label: 'Kg', value: 'kg'},
+    {label: 'Grams', value: 'grams'},
+    {label: 'Pounds', value: 'pounds'},
+  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setloading(true);
+      // console.log(new Date("2025-02-21").toLocaleDateString)
+      try {
+        // console.log("ids",id)
+        if (id) {
+          const response = await api.get(`/seller/product/by-id/${id}`);
+          const data = response?.data?.data;
+          
+             if(data.inventoryInfo){
+              const response = await api.get(`/seller/inventory/by-id/${data.inventoryInfo}`);              
+          setSelectedProduct(response.data.data);
+             }
 
+          setActualPrice(data.actualPrice.toString());
+          setSellingPrice(data.sellingPrice.toString());
+          const photoUrl = (await generateSignedUrl(data.photoUrl)) || '';
+          setImage(photoUrl);
+          const videoUrl = (await generateSignedUrl(data.videoUrl)) || '';
+          setVideo(videoUrl);
+          setSelectedCategory(data.category);
+          setSelectedSubCategory(data.subCategory);
+          const productWeight = data.productWeight.replace(/[^\d.-]/g, '');
+          setProductWeight(productWeight);
+          const measurement = data.productWeight.replace(/[^a-zA-Z]/g, ''); // Keep only letters (a-z, A-Z)
+          setMeasurement(measurement);
+        }
+        //  console.log(data)
+      } catch (error) {
+        console.log('error while fetching', error);
+      } finally {
+        setloading(false);
+      }
+    };
+    fetchData();
+  }, []);
+  // console.log(selectedProduct)
   return (
     <>
       {loading ? (
@@ -123,14 +253,14 @@ const ProductUploadForm = () => {
           </View>
         </View>
       ) : null}
-
+<Header/>
       <View style={styles.container}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.backButton}
           onPress={() => Navigation.goBack()}>
           <AntDesign name="left" size={25} />
           <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <Text style={styles.header}>Upload Product</Text>
 
         <ScrollView style={styles.scrollContainer}>
@@ -140,7 +270,7 @@ const ProductUploadForm = () => {
             value={selectedProduct.inventoryName}
             data={products}
             onChange={item => setSelectedProduct(item)}
-            labelField="inventoryName"
+            labelField={'inventoryName'}
             valueField="inventoryName"
             placeholder="Choose a product"
             style={styles.dropdown}
@@ -176,7 +306,7 @@ const ProductUploadForm = () => {
                 <View style={styles.productInfo}>
                   <Text style={styles.productLabel}>Expiry Date:</Text>
                   <Text style={styles.productText}>
-                    {new Date(selectedProduct.expiryDate).toLocaleDateString()}
+                    {selectedProduct.expiryDate}
                   </Text>
                 </View>
               )}
@@ -203,7 +333,7 @@ const ProductUploadForm = () => {
                           ]}>
                           <Text
                             style={[styles.inventoryText, {color: 'white'}]}>
-                            Color: {inventoryItem.color}
+                            {/* Color: {inventoryItem.color} */}
                           </Text>
                         </View>
                       )}
@@ -226,7 +356,6 @@ const ProductUploadForm = () => {
                     </>
                   ) : (
                     <>
-                      {console.log(inventoryItem, 'thisa')}
                       <Text style={styles.inventoryLabel}>
                         Inventory Item {index + 1}
                       </Text>
@@ -240,7 +369,7 @@ const ProductUploadForm = () => {
                           </Text>
                         </View>
                       ) : (
-                        'N/A'
+                       null
                       )}
 
                       {inventoryItem.color && (
@@ -254,7 +383,7 @@ const ProductUploadForm = () => {
                           ]}>
                           <Text
                             style={[styles.inventoryText, {color: 'white'}]}>
-                            Color: {inventoryItem.color}
+                            {/* Color: {inventoryItem.color} */}
                           </Text>
                           <Text
                             style={[styles.inventoryText, {color: 'white'}]}>
@@ -367,6 +496,31 @@ const ProductUploadForm = () => {
               ) : null}
             </>
           )}
+          <Text style={styles.label}>Product Weight: </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              // justifyContent:'space-between',
+              gap: 10,
+            }}>
+            <TextInput
+              style={[styles.inputBox, {width: '40%'}]}
+              value={productWeight}
+              keyboardType="numeric"
+              placeholderTextColor={'#777'}
+              placeholder="Weight"
+              onChangeText={setProductWeight}
+            />
+            <Dropdown
+              value={measurement}
+              data={weight}
+              onChange={item => setMeasurement(item.value)}
+              labelField="label"
+              valueField="value"
+              placeholder="Measurement"
+              style={[styles.dropdown, {width: '45%'}]}
+            />
+          </View>
 
           {/* Submit Button */}
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
@@ -511,7 +665,7 @@ const styles = StyleSheet.create({
   uploadButton: {
     backgroundColor: '#222',
     padding: 12,
-    height:100,
+    height: 100,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
