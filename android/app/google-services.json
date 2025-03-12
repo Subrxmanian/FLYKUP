@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "383052907259",
+    "project_id": "flykup-983e8",
+    "storage_bucket": "flykup-983e8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383052907259:android:183924533b9d86ec8fe65e",
+        "android_client_info": {
+          "package_name": "com.flykup"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "383052907259-4rosji441qbu9m1f4lstfvrl9ann60lv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.flykup",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "383052907259-dn2vjvo5sctdt5pkcgntp6h45ev4c8s7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRHxrb7_LLSpitlRoaTYvKCHyYkdqkZ1M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "383052907259-dn2vjvo5sctdt5pkcgntp6h45ev4c8s7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
