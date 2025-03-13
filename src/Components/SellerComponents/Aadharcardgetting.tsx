@@ -2,7 +2,7 @@ import { useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, SafeAreaView, TouchableOpacity, ToastAndroid } from 'react-native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 const AadhaarVerificationScreen = ({ navigation }) => {
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [name, setName] = useState('');
@@ -11,7 +11,7 @@ const AadhaarVerificationScreen = ({ navigation }) => {
   const route=useRoute()
   // const { formData } = route.params as { formData:any };
   const {formData}= route.params as {formData:any}||''
-  console.log(formData)
+  
 
   // Handle Aadhaar number change
   const handleAadhaarChange = (text) => {
@@ -40,7 +40,7 @@ const AadhaarVerificationScreen = ({ navigation }) => {
         aadharInfo:{aadharNumber:aadhaarNumber, aadharName:name}
       }
       navigation.navigate('AddressDetails',{data:data});
-      console.log('Aadhaar Verified');
+    
     } else {
             
         ToastAndroid.show("Please fill out the fields correctly",ToastAndroid.SHORT)
@@ -63,7 +63,7 @@ const AadhaarVerificationScreen = ({ navigation }) => {
         {/* Aadhaar Number */}
         <Text style={styles.label}>Aadhaar Number</Text>
         <View style={styles.inputContainer}>
-          <AntDesign name="lock" size={25} color="blue" />
+          <MaterialIcons name="lock-person" size={25} color="blue" />
           <TextInput
             placeholder="XXXX XXXX XXXX"
             placeholderTextColor={"#777"}
@@ -79,7 +79,7 @@ const AadhaarVerificationScreen = ({ navigation }) => {
         {/* Name as per Aadhaar */}
         <Text style={styles.label}>Name as per Aadhaar</Text>
         <View style={styles.inputContainer}>
-          <AntDesign name="user" size={25} color="blue" />
+          <MaterialIcons name="person" size={25} color="blue" />
           <TextInput
             placeholder="Enter name exactly as on Aadhar"
             placeholderTextColor={"#777"}
@@ -118,7 +118,8 @@ const AadhaarVerificationScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 10,
+    backgroundColor:'#fff'
   },
   header: {
     alignItems: 'center',
@@ -193,8 +194,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backButton: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     paddingVertical: 10,
+    backgroundColor:'#eff6ff',
+    borderRadius:10,
   },
   backButtonText: {
     color: "rgb(37 99 235)",

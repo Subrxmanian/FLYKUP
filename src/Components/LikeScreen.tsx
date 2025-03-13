@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 
 const likeData = [
   {
@@ -7,7 +14,7 @@ const likeData = [
     name: 'Daffa Kereh',
     time: '39m',
     message: 'From your contact is on HackLife as daffa_cabul.',
-    image: require('../assets/images/logo.png'), // Replace with actual image
+    image: require('../assets/images/makkapa1.png'),
     follow: true,
   },
   {
@@ -15,7 +22,7 @@ const likeData = [
     name: 'Fridolina Chang',
     time: '1h',
     message: 'From your contact is on HackLife as linaaselele.',
-    image: require('../assets/images/logo.png'),
+    image: require('../assets/images/profile-1.jpg'),
     follow: true,
   },
   {
@@ -23,7 +30,7 @@ const likeData = [
     name: 'Fridolina and others',
     time: '4h',
     message: 'Liked your videos.',
-    image: require('../assets/images/logo.png'),
+    image: require('../assets/images/profile-2.jpg'),
     follow: false,
   },
   {
@@ -31,15 +38,15 @@ const likeData = [
     name: 'Mahmud',
     time: '12h',
     message: 'Liked your videos.',
-    image: require('../assets/images/logo.png'),
+    image: require('../assets/images/profile-3.jpg'),
     follow: true,
   },
 ];
 
 const LikeScreen = () => {
-  const renderItem = ({ item }) => (
+  const renderItem = ({item}) => (
     <View style={styles.itemContainer}>
-      <Image source={require('../assets/images/profile.jpg')} style={styles.userImage} />
+      <Image source={item.image} style={styles.userImage} />
       <View style={styles.textContainer}>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.message}>{item.message}</Text>
@@ -54,32 +61,62 @@ const LikeScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.heading}>
-        <Text style={styles.headingtext}>New</Text>
-      </TouchableOpacity>
-      <FlatList
-        data={likeData}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-      />
-    </View>
+    <>
+      <View style={styles.overlay}>
+        <View style={styles.overlayContainer}>
+          <Text style={styles.loadingText}>Comming Soon</Text>
+        </View>
+      </View>
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.heading}>
+          <Text style={styles.headingtext}>New</Text>
+        </TouchableOpacity>
+        <FlatList
+          data={likeData}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+        />
+      </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  heading:{
-    backgroundColor:'rgb(235 235 251)',
-    alignItems:'center',
-    justifyContent:'center',
-    borderRadius:10,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  overlayContainer: {
+    // backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  loadingText: {
+    fontSize: 16,
+    marginLeft: 10,
+    color: 'white',
+  },
+  heading: {
+    backgroundColor: 'rgb(235 235 251)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
     // flex:1,
   },
-  headingtext:{
-    fontSize:16,
-    marginBottom:10,
+  headingtext: {
+    fontSize: 16,
+    marginBottom: 10,
     // textAlign:'center',
-    color:"blue"
+    color: 'blue',
   },
   container: {
     flex: 1,

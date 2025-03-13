@@ -1,103 +1,107 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Animated, ActivityIndicator, ToastAndroid } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, Animated, ToastAndroid } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import api from '../Utils/Api';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import Snackbar from 'react-native-snackbar';
 
 const { width, height } = Dimensions.get('window');
 
 const SplashScreen = () => {
   const navigation = useNavigation();
-  const [versions, setVersions] = useState(null); // Set to null to check if version is not fetched yet
-  const [loading, setLoading] = useState(true); // Manage loading state for fetching version
-
-  // Animation values
+  const [internetConnected, setInternetConnected] = useState(true); // Track if internet is available
+  const [wasDisconnected, setWasDisconnected] = useState(false); // To show a toast/snackbar when reconnecting
   const logoOpacity = new Animated.Value(0);
   const logoTranslateY = new Animated.Value(50);
   const textOpacity = new Animated.Value(0);
 
-  // Start animation and navigation after splash screen display
+  // Use to check the internet connection and perform API logic
   useEffect(() => {
-    // Sequence for animation
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const isConnected = state.isConnected;
+      setInternetConnected(isConnected);
+
+      if (!isConnected) {
+        setWasDisconnected(true);
+        Snackbar.show({
+          text: 'No Internet Connection',
+          backgroundColor: 'red',
+        });
+      } else {
+        if (wasDisconnected) {
+          Snackbar.dismiss(); // Dismiss "No Internet" Snackbar
+          setTimeout(() => {
+            Snackbar.show({
+              text: 'Back to Online',
+              backgroundColor: 'green',
+            });
+          }, 250);
+        }
+        setWasDisconnected(false);
+        fetchVersion(); // Fetch version when connected
+      }
+    });
+
+    return () => unsubscribe();
+  }, [wasDisconnected]);
+
+  // Function to fetch version and handle logic
+  const fetchVersion = async () => {
+    try {
+      const response = await api.get('/settings/get');
+      const currentVersion = await DeviceInfo.getVersion();
+
+      if (currentVersion === response?.data?.data?.appSettings?.userAppVersion) {
+        const name = await AsyncStorage.getItem("userName") || '';
+        if (!name) navigation.navigate('Login');
+        else navigation.navigate("bottomtabbar");
+      } else {
+        navigation.navigate('update');
+      }
+    } catch (error) {
+      console.log('Error fetching version:', error);
+      // ToastAndroid.show("No Internet. Retrying...", ToastAndroid.SHORT);
+    }
+  };
+
+  // Initial animation sequence for logo and text
+  useEffect(() => {
     Animated.sequence([
-      // Fade in and slide up logo
-      Animated.parallel([
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoTranslateY, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
-      // Fade in text
-      Animated.timing(textOpacity, {
+      // Logo appears
+      Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 800,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoTranslateY, {
+        toValue: 0,
+        duration: 1000,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Navigate after delay
-    const timer = setTimeout(() => {
-      handleNavigation();
-    }, 3000);
+    setTimeout(() => {
+      Animated.timing(logoOpacity, {
+        toValue: 0,
+        duration: 1000, // Fade out the logo
+        useNativeDriver: true,
+      }).start();
 
-    // Clean up timer on component unmount
-    return () => clearTimeout(timer);
-  }, [versions]);
-
-  // Fetch app version and compare it with the server version
-  const fetchVersion = async () => {
-    try {
-      const response = await api.get('/settings/get');
-      setVersions(response.data.data.appSettings);
-      setLoading(false); // Set loading to false when the version is fetched
-    } catch (error) {
-      ToastAndroid.show("No Internet",ToastAndroid.SHORT)
-      console.log('Error fetching version:', error);
-      
-      setLoading(false);
-    }
-  };
-
-  const handleNavigation = async () => {
-    const currentVersion = await DeviceInfo.getVersion();
-    // AsyncStorage.removeItem("userName")
-    // If the version is not fetched yet, try fetching it again
-    if (!versions) {
-      fetchVersion();
-      return;
-    }
-
-    // Navigate based on the version comparison
-    if (currentVersion === versions.userAppVersion) {
-      const name = await AsyncStorage.getItem("userName")||''
-      if(!name)
-      navigation.navigate('Login');
-    else{
-      navigation.navigate("bottomtabbar")
-    }
-    } else {
-      navigation.navigate('update');
-    }
-  };
-
-  // If loading, show a loader
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#000000" />
-      </View>
-    );
-  }
+      setTimeout(() => {
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 1000, 
+          useNativeDriver: true,
+        }).start();
+      }, 1000); // Start text animation after logo fade out
+    }, 3000); // Delay before starting the fade-out and text animation
+  }, []);
 
   return (
     <View style={styles.container}>
+      {/* Show logo with animation */}
       <Animated.View
         style={[
           styles.logoContainer,
@@ -108,12 +112,13 @@ const SplashScreen = () => {
         ]}
       >
         <Image
-          source={require('../assets/images/logo.png')} // Logo path
+          source={require('../assets/images/logo.png')} // Path to your logo image
           style={styles.logo}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       </Animated.View>
 
+      {/* Show title and subtitle with animation */}
       <Animated.Text
         style={[
           styles.title,
@@ -151,17 +156,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logo: {
-    width: width * 0.9, // Adjust logo size for better visual balance
-    height: width * 0.7, // Maintain aspect ratio with width
+    width: 300,
+    height: 159,
   },
   title: {
-    fontSize: 36, // Increased font size for better visibility
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#000000',
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 18, // Slightly larger font for better readability
+    fontSize: 18,
     color: '#666666',
     textAlign: 'center',
     paddingHorizontal: 20,
