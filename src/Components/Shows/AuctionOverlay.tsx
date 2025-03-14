@@ -219,7 +219,8 @@ const AuctionsOverlay = ({streamId, currentAuction}) => {
           {/* </View> */}
         </View>
       </View>
-      </View>:null}
+      </View>
+      :null}
       </>
    
    

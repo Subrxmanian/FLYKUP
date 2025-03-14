@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   FlatList,
+  Modal,
 } from 'react-native';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -54,6 +55,10 @@ const LiveStreamScreen = () => {
   const giveaway = stream.stream.giveawayProducts || [];
   const [winnerDetails, setWinnerDetails] = useState({});
   const [flag,setflag]=useState(false)
+  const [isAddressSelected,setIsAddressSelected]=useState(false)
+  const [selectedAddress,setselectedAddress]=useState({})
+  const [selectedProduct,setselectedProduct]=useState({})
+  
   const socket = io(socketurl, {
     transports: ['websocket'],
   });
@@ -189,55 +194,63 @@ const LiveStreamScreen = () => {
   const handleapplied=(item)=>{
     setHasApplied(prev => ({...prev, [item._id]: true}));
   }
+const onSelectAddress = (address)=>{
+  setselectedAddress(address)
 
+}
+const onBack = ()=>{
+  setIsAddressSelected(false)
+}
+const handlePayment = async () => {
+  try {
+    setIsAddressSelected(false)
+    const numericAmount=Number(selectedProduct?.productPrice)||0
+    const response = await api.post(`/cashfree/create-order`, {
+      amount: numericAmount,
+    });
+
+    const paymentSessionId = response.data.paymentSessionId;
+    const orderID = response.data.orderId;
+
+    const session = new CFSession(
+      paymentSessionId,
+      orderID,
+      CFEnvironment.SANDBOX,
+    );
+
+    const theme = new CFThemeBuilder()
+      .setNavigationBarBackgroundColor('#E64A19') // ios
+      .setNavigationBarTextColor('#FFFFFF') // ios
+      .setButtonBackgroundColor('#FFC107') // ios
+      .setButtonTextColor('#FFFFFF') // ios
+      .setPrimaryTextColor('#212121')
+      .setSecondaryTextColor('#757575') // ios
+      .build();
+    CFPaymentGatewayService.setCallback({
+      onVerify(orderID: string): void {
+        console.log('Order ID is: ' + orderID);
+        navigation.navigate('PaymentSuccess', {orderID,product:selectedProduct});
+      },
+
+      onError(error: CFErrorResponse, orderID: string): void {
+        console.log(
+          'Error: ' + JSON.stringify(error) + '\nOrder ID: ' + orderID,
+        );
+        navigation.navigate('PaymentFailed', {error, numericAmount});
+      },
+    });
+    const dropPayment = new CFDropCheckoutPayment(session, null, theme);
+    CFPaymentGatewayService.doPayment(dropPayment);
+  } catch (error) {
+    console.log('Error initiating payment:', error);
+    // navigation.navigate("PaymentFailed", { error: error.message });
+  }
+};
 
   const renderProduct = ({item}) => {
     const imageKeys = item?.images || [];
     const imageUrls = imageKeys?.map(key => generateSignedUrl(key));
     // console.group(item.images)
-    const handlePayment = async (numericAmount: any) => {
-      try {
-        const response = await api.post(`/cashfree/create-order`, {
-          amount: numericAmount,
-        });
-
-        const paymentSessionId = response.data.paymentSessionId;
-        const orderID = response.data.orderId;
-
-        const session = new CFSession(
-          paymentSessionId,
-          orderID,
-          CFEnvironment.SANDBOX,
-        );
-
-        const theme = new CFThemeBuilder()
-          .setNavigationBarBackgroundColor('#E64A19') // ios
-          .setNavigationBarTextColor('#FFFFFF') // ios
-          .setButtonBackgroundColor('#FFC107') // ios
-          .setButtonTextColor('#FFFFFF') // ios
-          .setPrimaryTextColor('#212121')
-          .setSecondaryTextColor('#757575') // ios
-          .build();
-        CFPaymentGatewayService.setCallback({
-          onVerify(orderID: string): void {
-            console.log('Order ID is: ' + orderID);
-            navigation.navigate('PaymentSuccess', {orderID, product: item});
-          },
-
-          onError(error: CFErrorResponse, orderID: string): void {
-            console.log(
-              'Error: ' + JSON.stringify(error) + '\nOrder ID: ' + orderID,
-            );
-            navigation.navigate('PaymentFailed', {error, numericAmount});
-          },
-        });
-        const dropPayment = new CFDropCheckoutPayment(session, null, theme);
-        CFPaymentGatewayService.doPayment(dropPayment);
-      } catch (error) {
-        console.log('Error initiating payment:', error);
-        // navigation.navigate("PaymentFailed", { error: error.message });
-      }
-    };
   
   
     return (
@@ -334,7 +347,9 @@ const LiveStreamScreen = () => {
         {selectedTab === 'Buy Now' ? (
           <TouchableOpacity
             style={styles.buyButton}
-            onPress={() => handlePayment(item?.productPrice)}>
+            onPress={() => {
+              setselectedProduct(item)
+              setIsAddressSelected(true)}}>
             <Text style={{fontSize: 16, fontWeight: '600'}}>₹ Buy Now</Text>
           </TouchableOpacity>
         ) : null}
@@ -560,6 +575,20 @@ const LiveStreamScreen = () => {
             ) : null}
           </View>
       </Animated.View>
+      <Modal
+        visible={isAddressSelected}
+        animationType="none"
+        transparent={true}
+        onRequestClose={() => setIsAddressSelected(false)}>
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContent}>
+         <AddressSelection selectedAddress={selectedAddress} onSelectAddress={onSelectAddress}
+         onNext={handlePayment}
+         onBack={onBack}
+         />
+         </View>
+        </View>
+      </Modal>
     </>
   );
 };
@@ -569,6 +598,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
     position: 'relative',
+  },
+  modalContent: {
+    // backgroundColor: '#1b223d',
+    padding: 20,
+    backgroundColor:'#fff',
+    // backgroundColor: 'rgba(0, 0, 0, 0.63)',
+    borderRadius: 5,
+    width: '85%',
+    // height:500,
+    alignItems: 'center',
+  },
+
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   actionIcons: {
     backgroundColor: '#fbbf24',

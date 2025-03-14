@@ -3,11 +3,21 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, SafeAreaView, TouchableOpacity, ToastAndroid } from 'react-native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { uploadImageToS3 } from '../../Utils/aws';
+
+import {launchImageLibrary} from 'react-native-image-picker';
+
 const AadhaarVerificationScreen = ({ navigation }) => {
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [name, setName] = useState('');
   const [aadhaarError, setAadhaarError] = useState('');
   const [nameError, setNameError] = useState('');
+  
+    const [image, setImage] = useState('');
+    const [imageUrl, setImageUrl] = useState(null);
+    const [loading, setloading] = useState(false);
+    const [isGst,setIsGst]=useState('')
+  
   const route=useRoute()
   // const { formData } = route.params as { formData:any };
   const {formData}= route.params as {formData:any}||''
@@ -47,19 +57,100 @@ const AadhaarVerificationScreen = ({ navigation }) => {
 
     }
   };
+    const selectMedia = async () => {
+      const options = {mediaType: 'photo', quality: 1};
+  
+      launchImageLibrary(options, async response => {
+        if (response.didCancel) {
+          console.log('User canceled image picker');
+          return;
+        }
+        if (response.errorMessage) {
+          console.error('Image Picker Error: ', response.errorMessage);
+          return;
+        }
+  
+        const uri = response.assets[0].uri;
+        if (!uri) {
+          console.error('No URI found for the image');
+          return;
+        }
+  
+        try {
+          console.log('Selected Image URI: ', uri); // Log URI to verify
+          setloading(true);
+          setImage(uri);
+  
+          // Upload to S3
+          console.log('Uploading image to S3...');
+          const url = await uploadImageToS3(uri, 'gstdocument');
+  
+          if (!url) {
+            console.error('Failed to upload image, URL not received');
+          } else {
+            setImageUrl(url);
+            console.log('Image uploaded successfully. URL:', url);
+          }
+        } catch (err) {
+          console.error('Error during image upload:', err);
+        } finally {
+          setloading(false);
+        }
+      });
+    };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.progress}>
           <View style={[styles.progressStep, styles.completed]} />
-          <View style={[styles.progressStep]} />
+          <View style={[styles.progressStep,styles.completed]} />
           <View style={styles.progressStep} />
         </View>
-        <Text style={styles.headerText}>Aadhaar Verification</Text>
+        <Text style={styles.headerText}>Business & KYC Verification</Text>
       </View>
 
       <View style={styles.form}>
+        <View>
+          <Text>Do you Have GST? </Text>
+        </View>
+        <View style={[styles.row, { marginTop: 10, marginBottom: 20 }]}>
+      {["Yes", "No"].map((value, index) => (
+        <TouchableOpacity
+          key={index}
+          style={[styles.button,value === isGst ? styles.selectedButton : {backgroundColor:'white',paddingHorizontal:20}]}
+          onPress={() => setIsGst(value)} >
+          <Text style={{color:value === isGst?"white":'black'}}>{value}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+
+            {isGst === 'Yes' && (
+            <>
+              <Text style={styles.label}>GST Number</Text>
+              <TextInput
+                style={[styles.input]}
+                placeholder="Enter GST number"
+                value={'GstNumber'}
+                // onChangeText={text => handleInputChange('GstNumber', text)}
+                placeholderTextColor={'#777'}
+              />
+            
+              <Text style={styles.label}>Upload GST Document : </Text>
+
+              <TouchableOpacity
+                style={styles.uploadButton}
+                onPress={() => selectMedia()}>
+                <AntDesign name="upload" size={20} color="white" />
+                <Text style={styles.uploadButtonText}>
+                  Upload your GST Document{' '}
+                </Text>
+              </TouchableOpacity>
+              {image && (
+                <Image source={{uri: image}} style={styles.imagePreview} />
+              )}
+            </>
+          )}
         {/* Aadhaar Number */}
         <Text style={styles.label}>Aadhaar Number</Text>
         <View style={styles.inputContainer}>
@@ -119,7 +210,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
-    backgroundColor:'#fff'
+    backgroundColor:'#F7CE45'
+  },
+  Gstbutton:{
+  paddingVertical:7,
+  paddingHorizontal:10,
+  backgroundColor:'white',
+  
+  },
+  selectedButton:{
+    backgroundColor:'#333'
+  },
+  row:{
+  flexDirection:'row',
+  gap:10,
+  alignItems:'center'
+  
   },
   header: {
     alignItems: 'center',
@@ -132,12 +238,12 @@ const styles = StyleSheet.create({
   progressStep: {
     height: 10,
     width: 30,
-    margin: 5,
+    // margin: 5,
     borderRadius: 5,
-    backgroundColor: '#D3D3D3',
+    backgroundColor: '#fff',
   },
   completed: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#333',
   },
   headerText: {
     fontSize: 20,

@@ -14,7 +14,8 @@ import {Dropdown} from 'react-native-element-dropdown';
 import api from '../../Utils/Api';
 import {useNavigation} from '@react-navigation/native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {uploadImageToS3} from '../../Utils/aws';
 
@@ -23,7 +24,12 @@ const SellerRegister = () => {
   const [mobileNumber, setMobileNumber] = useState('');
   const [GstNumber, setGstNumber] = useState('');
   const [email, setemail] = useState('');
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState([
+    {categoryName: 'Partner ship'},
+    {categoryName: 'Sole Proprietor'},
+    {categoryName: 'Individual'},
+    {categoryName: 'Private Limited'},
+  ]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [businessType, setBusinessType] = useState('');
   const [errors, setErrors] = useState({});
@@ -31,10 +37,6 @@ const SellerRegister = () => {
   const [image, setImage] = useState('');
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setloading] = useState(false);
-  const businessTypes = [
-    {label: 'Social Seller', value: 'social'},
-    {label: 'Brand Seller', value: 'brand'},
-  ];
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -43,7 +45,7 @@ const SellerRegister = () => {
       try {
         const response = await api.get('/categories/get');
         // console.log('this works')
-        setCategories(response.data); // Assuming response.data is an array of categories
+        // setCategories(response.data); // Assuming response.data is an array of categories
       } catch (err) {
         console.log('Failed to fetch categories', err);
       } finally {
@@ -63,8 +65,8 @@ const SellerRegister = () => {
     }
   };
   const selectMedia = async () => {
-    const options = { mediaType: 'photo', quality: 1 };
-  
+    const options = {mediaType: 'photo', quality: 1};
+
     launchImageLibrary(options, async response => {
       if (response.didCancel) {
         console.log('User canceled image picker');
@@ -74,22 +76,22 @@ const SellerRegister = () => {
         console.error('Image Picker Error: ', response.errorMessage);
         return;
       }
-  
+
       const uri = response.assets[0].uri;
       if (!uri) {
         console.error('No URI found for the image');
         return;
       }
-  
+
       try {
-        console.log('Selected Image URI: ', uri);  // Log URI to verify
+        console.log('Selected Image URI: ', uri); // Log URI to verify
         setloading(true);
         setImage(uri);
-  
+
         // Upload to S3
         console.log('Uploading image to S3...');
         const url = await uploadImageToS3(uri, 'gstdocument');
-  
+
         if (!url) {
           console.error('Failed to upload image, URL not received');
         } else {
@@ -103,7 +105,7 @@ const SellerRegister = () => {
       }
     });
   };
-  
+
   const validate = () => {
     let validationErrors = {};
 
@@ -148,8 +150,9 @@ const SellerRegister = () => {
     setErrors(validationErrors);
     return validationErrors;
   };
-
+  // console.log(categories)
   const handleSubmit = () => {
+    Navigation.navigate('aadharverify', {formData: ''});
     const validationErrors = validate();
     if (businessType == 'brand') {
       if (!imageUrl) {
@@ -175,7 +178,7 @@ const SellerRegister = () => {
       };
 
       // Send the data object to the next screen
-      Navigation.navigate('aadharverify', {formData: formData});
+      
     }
   };
 
@@ -215,18 +218,19 @@ const SellerRegister = () => {
         {/* Step Indicator */}
         <View style={styles.header}>
           <View style={styles.progress}>
-            <View
-              style={[styles.progressStep, {backgroundColor: 'rgb(37 99 235)'}]}
-            />
+            <View style={[styles.progressStep, {backgroundColor: '#333'}]} />
             <View style={[styles.progressStep]} />
             <View style={styles.progressStep} />
           </View>
-          <Text style={styles.headerText}>Seller Details</Text>
+        </View>
+        <View style={styles.row}>
+          <Icons name="pencil-box" size={30} />
+          <Text style={styles.headerText}>Social Seller</Text>
         </View>
 
         {/* Wrap the entire content in a ScrollView */}
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <Text style={styles.label}>Company Name</Text>
+          <Text style={styles.label}>Full Name/Business Name</Text>
           <TextInput
             style={[styles.input, errors.companyName && styles.inputError]}
             placeholder="Enter company name"
@@ -254,7 +258,7 @@ const SellerRegister = () => {
           )}
 
           {/* Business Type */}
-          <Text style={styles.label}>Business Type</Text>
+          {/* <Text style={styles.label}>Business Type</Text>
           <Dropdown
             data={businessTypes}
             style={[
@@ -272,9 +276,9 @@ const SellerRegister = () => {
           />
           {errors.businessType && (
             <Text style={styles.errorText}>{errors.businessType}</Text>
-          )}
+          )} */}
 
-          {businessType === 'brand' && (
+          {/* {businessType === 'brand' && (
             <>
               <Text style={styles.label}>GST Number</Text>
               <TextInput
@@ -301,53 +305,123 @@ const SellerRegister = () => {
                 <Image source={{uri: image}} style={styles.imagePreview} />
               )}
             </>
-          )}
+          )} */}
 
           {/* Business Categories */}
-          <Text style={styles.label}>Business Categories</Text>
+          <Text style={styles.label}>Business Type</Text>
 
           {/* Scrollable Category Container */}
           <View style={styles.categoryContainer}>
-            {categories.length > 0 ? (
-              categories.map((category, index) => (
-                <Text
-                  key={index}
-                  style={[
-                    styles.checkboxLabel,
-                    selectedCategories.includes(category.categoryName) &&
-                      styles.selectedCategory,
-                  ]}
-                  onPress={() => handleCategoryChange(category.categoryName)}>
-                  {selectedCategories.includes(category.categoryName)
-                    ? <MaterialCommunityIcons name="checkbox-marked-circle-outline" color="#1e90ff" size={20}/>
-                    : null}{' '}
-                  {category.categoryName}
-                </Text>
-              ))
-            ) : (
-              <Text style={styles.label}>No categories available</Text>
-            )}
+            <ScrollView horizontal>
+              {categories.length > 0
+                ? categories.map((category, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.checkboxLabel,
+                        selectedCategories.includes(category.categoryName) &&
+                          styles.selectedCategory,
+                      ]}
+                      onPress={() =>
+                        handleCategoryChange(category.categoryName)
+                      }>
+                      <Text
+                        style={{
+                          color: selectedCategories.includes(
+                            category.categoryName,
+                          )
+                            ? 'white'
+                            : 'black',
+                        }}>
+                        {selectedCategories.includes(category.categoryName) ? (
+                          <Icons
+                            name="checkbox-marked-circle-outline"
+                            color="green"
+                            size={20}
+                          />
+                        ) : null}{' '}
+                        {category.categoryName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                : null}
+            </ScrollView>
           </View>
           {errors.categories && (
             <Text style={styles.errorText}>{errors.categories}</Text>
           )}
 
-          <Text style={styles.label}>Email </Text>
-          <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
-            placeholder="Enter the Email"
-            keyboardType="email-address"
-            value={email}
-            placeholderTextColor={'#777'}
-            onChangeText={text => handleInputChange('email', text)}
-          />
+          <Text style={styles.label}>Business Address </Text>
+          <View style={styles.row}>
+            <View style={{width: '50%'}}>
+              <View style={styles.row}>
+                <MaterialIcons name="location-on" size={20} />
+                <Text style={styles.label}>Street Address </Text>
+              </View>
+
+              <TextInput
+                style={[styles.input]}
+                placeholder="Enter Street Address"
+                keyboardType="email-address"
+                value={email}
+                placeholderTextColor={'#777'}
+                onChangeText={text => handleInputChange('email', text)}
+              />
+            </View>
+            <View style={{width: '50%'}}>
+              <View style={styles.row}>
+                <MaterialIcons name="location-on" size={20} />
+                <Text style={styles.label}>City </Text>
+              </View>
+              <TextInput
+                style={[styles.input]}
+                placeholder="Enter city"
+                keyboardType="email-address"
+                value={email}
+                placeholderTextColor={'#777'}
+                onChangeText={text => handleInputChange('email', text)}
+              />
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={{width: '50%'}}>
+              <View style={styles.row}>
+                <Icons name="sign-real-estate" size={20} />
+                <Text style={styles.label}>State </Text>
+              </View>
+
+              <TextInput
+                style={[styles.input]}
+                placeholder="Enter the State"
+                keyboardType="email-address"
+                value={email}
+                placeholderTextColor={'#777'}
+                onChangeText={text => handleInputChange('email', text)}
+              />
+            </View>
+            <View style={{width: '50%'}}>
+              <View style={styles.row}>
+                <Icons name="office-building-outline" size={20} />
+                <Text style={styles.label}>Pincode </Text>
+              </View>
+              <TextInput
+                style={[styles.input]}
+                placeholder="Enter Pincode"
+                keyboardType="email-address"
+                value={email}
+                maxLength={6}
+                placeholderTextColor={'#777'}
+                onChangeText={text => handleInputChange('email', text)}
+              />
+            </View>
+          </View>
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
           {/* Submit Button */}
           <TouchableOpacity
             style={styles.submitButton}
             onPress={() => handleSubmit()}>
-            <Text style={{fontSize: 16}}>Submit</Text>
+            <Text style={{fontSize: 16,color:'white'}}>Continue</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -366,6 +440,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
   },
   overlayContainer: {
     backgroundColor: 'white',
@@ -388,7 +467,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#F7CE45',
   },
   scrollContainer: {
     flexGrow: 1, // Ensures the ScrollView expands to fit content
@@ -413,6 +492,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
+    marginBottom: 20,
   },
   progress: {
     flexDirection: 'row',
@@ -421,34 +501,37 @@ const styles = StyleSheet.create({
   progressStep: {
     height: 10,
     width: 30,
-    margin: 5,
+    // margin: 5,
     borderRadius: 5,
-    backgroundColor: '#D3D3D3',
+    backgroundColor: '#fff',
   },
   headerText: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
   },
   submitButton: {
-    marginTop: 10,
-    backgroundColor: 'rgb(255 190 0)',
+    marginTop: 30,
+    backgroundColor: '#333',
     paddingHorizontal: 10,
     paddingVertical: 10,
+
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 10,
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     marginTop: 10,
-    marginBottom:4,
+    marginBottom: 4,
     color: '#333',
   },
   input: {
     height: 50,
-    borderColor: '#ddd',
-    borderWidth: 1,
+    // borderColor: '#ddd',
+    // borderWidth: 1,
+    elevation: 3,
+    backgroundColor: '#fff',
     borderRadius: 5,
     paddingLeft: 10,
   },
@@ -468,10 +551,14 @@ const styles = StyleSheet.create({
   categoryContainer: {
     // maxHeight: 200,
     // flexDirection:'row',
-    width: '100%',
+    // width: '100%',
     borderRadius: 8,
-    borderColor: '#ddd',
-    borderWidth: 1,
+    // height:50,
+    // borderColor: '#ddd',
+    // borderWidth: 1,
+    // paddingBotto
+    gap: 10,
+
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -480,22 +567,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   checkboxLabel: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 12,
+    color: 'black',
+    backgroundColor: 'white',
+    marginRight: 10,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#777',
+    // borderWidth: 1,
+    // borderColor: '#777/',
     marginBottom: 5,
     borderRadius: 8,
-    width: '100%',
     textAlign: 'center',
   },
   selectedCategory: {
     fontWeight: 'bold',
-    // backgroundColor: '#1e90ff',
-    
-    color: '#1e90ff',
+    backgroundColor: '#1E1E1E',
+
+    color: 'white',
     borderColor: '#1e90ff',
   },
   errorText: {

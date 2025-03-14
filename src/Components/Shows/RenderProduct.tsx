@@ -15,7 +15,7 @@ const socket = io(socketurl, {
 });
 
 const RenderProduct = ({item, streamId,hasApplied,handleapplied,winner,fetchWinner}) => {
-  const [applicants, setApplicants] = useState([]);
+  const [applicants, setApplicants] = useState({});
 
   const [user, setUser] = useState(null);
   const imageKeys = item?.images || [];
@@ -48,12 +48,12 @@ const RenderProduct = ({item, streamId,hasApplied,handleapplied,winner,fetchWinn
   useEffect(() => {
     // const handlecheck = () => {
     // console.log(item)
-      socket.emit('startGiveaway', {
-        streamId,
-        productId: item._id,
-        productTitle: item.title,
-        followersOnly: false,  // Update if needed
-    });
+    //   socket.emit('startGiveaway', {
+    //     streamId,
+    //     productId: item._id,
+    //     productTitle: item.title,
+    //     followersOnly: false,  // Update if needed
+    // });
     // console.log(`${streamId}_${item._id}`)
       socket.on('giveawayWinner', ({giveawayKey, winner}) => {
         if (giveawayKey === `${streamId}_${item._id}`) {
@@ -64,9 +64,10 @@ const RenderProduct = ({item, streamId,hasApplied,handleapplied,winner,fetchWinn
       socket.on(
         'giveawayApplicantsUpdated',
         ({giveawayKey, applicants: updatedApplicants}) => {
+          console.log(giveawayKey, applicants, 'why');
           if (giveawayKey === `${streamId}_${item._id}`) {
-            console.log(giveawayKey, applicants, 'why');
-            setApplicants(updatedApplicants);
+            setApplicants(prev => ({...prev, [item._id]: updatedApplicants}));
+            // setApplicants(updatedApplicants);
           }
         },
       );
@@ -84,7 +85,8 @@ const RenderProduct = ({item, streamId,hasApplied,handleapplied,winner,fetchWinn
             (applicant) => applicant === userId
           );
   
-          setApplicants(product.applicants)
+          // setApplicants(product.applicants)
+          setApplicants(prev => ({...prev, [product.productId]: product.applicants}));
           if (matchedApplicant) {
             // console.log(product)
             handleapplied({_id:product.productId})
@@ -132,10 +134,10 @@ const RenderProduct = ({item, streamId,hasApplied,handleapplied,winner,fetchWinn
               {item?.quantity}
             </Text>
           </View>
-          {applicants?.length > 0 ? (
+          {applicants[item._id]?.length > 0 ? (
             <>
               <Text style={{color: '#ccc'}}>
-                {applicants.length} applicants applied
+                {applicants[item._id].length} applicants applied
               </Text>
             </>
           ) : (

@@ -525,7 +525,7 @@ const Streaming = () => {
         <RNView style={{position: 'relative', flex: 1}}>
           {localStream && (
             <RTCView
-              streamURL={localStream.toURL()}
+              // streamURL={localStream.toURL()}
               style={{width: '100%', height: '100%'}}
               objectFit="cover"
             />
